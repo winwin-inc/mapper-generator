@@ -1,0 +1,41 @@
+{
+    "name": "wenbinye/mapper-generator",
+    "description": "Generator for object property mapper",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ye Wenbin",
+            "email": "wenbinye@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "wenbinye\\mapper\\": ["src/", "lib/"]
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "wenbinye\\mapper\\": "tests/"
+        }
+    },
+    "require": {
+        "php": "^7.2",
+        "doctrine/annotations": "^1.8",
+        "kuiper/kuiper": "^0.5",
+        "laminas/laminas-code": "^3.4",
+        "nikic/php-parser": "^4.9",
+        "psr/log": "^1.1",
+        "symfony/console": "^5.1",
+        "symfony/finder": "^5.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^7.0",
+        "phpstan/extension-installer": "^1.0",
+        "phpstan/phpstan": "^0.12",
+        "phpstan/phpstan-strict-rules": "^0.12",
+        "winwin/composer-phpcs-plugin": "^0.2"
+    }
+}
