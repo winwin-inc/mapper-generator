@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper\fixtures;
+namespace winwin\mapper\fixtures;
 
 class OrderItem
 {

@@ -8,7 +8,7 @@
 ```php
 <?php
 
-use wenbinye\mapper\annotations\Mapper;
+use winwin\mapper\annotations\Mapper;
 
 /**
  * @Mapper()

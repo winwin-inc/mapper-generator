@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper\fixtures;
+namespace winwin\mapper\fixtures;
 
-use wenbinye\mapper\MapperTrait;
+use winwin\mapper\MapperTrait;
 
 class SimpleMapper
 {

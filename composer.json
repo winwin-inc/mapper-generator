@@ -1,24 +1,24 @@
 {
-    "name": "wenbinye/mapper-generator",
+    "name": "winwin/mapper-generator",
     "description": "Generator for object property mapper",
     "type": "library",
     "license": "MIT",
     "authors": [
         {
             "name": "Ye Wenbin",
-            "email": "wenbinye@gmail.com"
+            "email": "winwin@gmail.com"
         }
     ],
     "minimum-stability": "dev",
     "prefer-stable": true,
     "autoload": {
         "psr-4": {
-            "wenbinye\\mapper\\": ["src/", "lib/"]
+            "winwin\\mapper\\": ["src/", "lib/"]
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "wenbinye\\mapper\\": "tests/"
+            "winwin\\mapper\\": "tests/"
         }
     },
     "require": {
@@ -37,5 +37,6 @@
         "phpstan/phpstan": "^0.12",
         "phpstan/phpstan-strict-rules": "^0.12",
         "winwin/composer-phpcs-plugin": "^0.2"
-    }
+    },
+    "bin": "bin/mapper-generator"
 }

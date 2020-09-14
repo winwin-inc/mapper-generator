@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper;
+namespace winwin\mapper;
 
 use Laminas\Code\Generator\ClassGenerator;
 use Laminas\Code\Generator\FileGenerator;
@@ -15,17 +15,48 @@ use PhpParser\PrettyPrinter\Standard;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\ConsoleOutput;
-use wenbinye\mapper\fixtures\OrderItem;
-use wenbinye\mapper\fixtures\OrderItemMapper;
-use wenbinye\mapper\fixtures\SimpleMapper;
+use winwin\mapper\converter\DateTimeStringConverter;
+use winwin\mapper\converter\EnumIntConverter;
+use winwin\mapper\converter\EnumStringConverter;
+use winwin\mapper\converter\IntEnumConverter;
+use winwin\mapper\converter\PrimitiveConverter;
+use winwin\mapper\converter\StringDateTimeConverter;
+use winwin\mapper\converter\StringEnumConverter;
+use winwin\mapper\fixtures\OrderItem;
+use winwin\mapper\fixtures\OrderItemMapper;
+use winwin\mapper\fixtures\SimpleMapper;
 
 class MapperGeneratorTest extends TestCase
 {
-    public function testName()
+    public function testOrderItemMapper()
     {
-        $mapperGenerator = new MapperGenerator(AnnotationReader::getInstance());
+        $mapperGenerator = new MapperGenerator(AnnotationReader::getInstance(), $this->createValueConverter());
         $mapperGenerator->setLogger(new ConsoleLogger(new ConsoleOutput()));
-        $mapperGenerator->generate(__DIR__.'/fixtures/OrderItemMapper.php');
+        $code = $mapperGenerator->generate(__DIR__.'/fixtures/OrderItemMapper.php');
+        $this->assertNotEmpty($code);
+    }
+
+    public function testCustomerMapper()
+    {
+        $mapperGenerator = new MapperGenerator(AnnotationReader::getInstance(), $this->createValueConverter());
+        $mapperGenerator->setLogger(new ConsoleLogger(new ConsoleOutput()));
+        $code = $mapperGenerator->generate(__DIR__.'/fixtures/CustomerMapper.php');
+        echo $code;
+        $this->assertNotEmpty($code);
+    }
+
+    public function createValueConverter(): ValueConverter
+    {
+        $converter = new ValueConverter();
+        $converter->addConverter(new PrimitiveConverter());
+        $converter->addConverter(new IntEnumConverter());
+        $converter->addConverter(new EnumIntConverter());
+        $converter->addConverter(new StringEnumConverter());
+        $converter->addConverter(new EnumStringConverter());
+        $converter->addConverter(new StringDateTimeConverter());
+        $converter->addConverter(new DateTimeStringConverter());
+
+        return $converter;
     }
 
     public function testscratch()

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper;
+namespace winwin\mapper;
 
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;

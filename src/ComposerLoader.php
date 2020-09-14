@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper;
+namespace winwin\mapper;
 
 use Composer\Autoload\ClassLoader;
 

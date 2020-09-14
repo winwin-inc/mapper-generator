@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper\annotations;
+namespace winwin\mapper\annotations;
 
 use Doctrine\Common\Annotations\Annotation\Required;
 

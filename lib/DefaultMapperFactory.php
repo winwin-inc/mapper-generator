@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper;
+namespace winwin\mapper;
 
 use Doctrine\Common\Annotations\Reader;
-use wenbinye\mapper\annotations\Mapper;
+use winwin\mapper\annotations\Mapper;
 
-class DefaultMapperFactory implements MapperRegistry
+class DefaultMapperFactory implements MapperFactory
 {
     /**
      * @var DefaultMapperFactory
@@ -55,11 +55,13 @@ class DefaultMapperFactory implements MapperRegistry
                 throw new \InvalidArgumentException("Class $mapperClass not annotated with ".Mapper::class);
             }
             $args = [];
-            foreach ($class->getConstructor()->getParameters() as $i => $parameter) {
-                if (null !== $parameter->getType() && class_exists($parameter->getType()->getName())) {
-                    $args[] = $this->getMapper($parameter->getType()->getName());
-                } else {
-                    throw new \InvalidArgumentException("Class $mapperClass {$i}th constructor parameter should be an mapper");
+            if (null !== $class->getConstructor()) {
+                foreach ($class->getConstructor()->getParameters() as $i => $parameter) {
+                    if (null !== $parameter->getType() && class_exists($parameter->getType()->getName())) {
+                        $args[] = $this->getMapper($parameter->getType()->getName());
+                    } else {
+                        throw new \InvalidArgumentException("Class $mapperClass {$i}th constructor parameter should be an mapper");
+                    }
                 }
             }
             $this->mappers[$mapperClass] = $class->newInstanceArgs($args);

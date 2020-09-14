@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper\fixtures;
+namespace winwin\mapper\fixtures;
 
-use wenbinye\mapper\annotations\InheritInverseConfiguration;
-use wenbinye\mapper\annotations\Mapper;
-use wenbinye\mapper\MapperTrait;
+use winwin\mapper\annotations\InheritInverseConfiguration;
+use winwin\mapper\annotations\Mapper;
+use winwin\mapper\MapperTrait;
 
 /**
  * @Mapper()

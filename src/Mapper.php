@@ -2,15 +2,24 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper;
+namespace winwin\mapper;
 
 use Doctrine\Common\Annotations\Reader;
 use kuiper\helper\Arrays;
+use kuiper\serializer\DocReader;
+use kuiper\serializer\DocReaderInterface;
+use Laminas\Code\Generator\ClassGenerator;
+use Laminas\Code\Generator\FileGenerator;
+use Laminas\Code\Reflection\ClassReflection;
+use PhpParser\Node;
 use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitorAbstract;
+use PhpParser\Parser;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
-use wenbinye\mapper\annotations\MappingSource;
-use wenbinye\mapper\annotations\MappingTarget;
+use winwin\mapper\annotations\MappingSource as MappingSourceAnnotation;
+use winwin\mapper\annotations\MappingTarget as MappingTargetAnnotation;
 
 class Mapper implements LoggerAwareInterface
 {
@@ -22,6 +31,19 @@ class Mapper implements LoggerAwareInterface
      * @var Reader
      */
     private $annotationReader;
+    /**
+     * @var ValueConverter
+     */
+    private $converter;
+    /**
+     * @var Parser
+     */
+    private $parser;
+
+    /**
+     * @var DocReaderInterface
+     */
+    private $docReader;
 
     /**
      * @var \ReflectionClass
@@ -34,17 +56,32 @@ class Mapper implements LoggerAwareInterface
     private $mappingMethods;
 
     /**
+     * @var array
+     */
+    private $methodBody;
+
+    /**
      * Mapper constructor.
      *
      * @param Reader           $annotationReader
      * @param \ReflectionClass $mapperClass
      */
-    public function __construct(Reader $annotationReader, \ReflectionClass $mapperClass)
+    public function __construct(Reader $annotationReader, ValueConverter $converter, Parser $parser, \ReflectionClass $mapperClass)
     {
         $this->annotationReader = $annotationReader;
+        $this->converter = $converter;
+        $this->parser = $parser;
+        $this->docReader = new DocReader();
         $this->mapperClass = $mapperClass;
         $this->mappingMethods = [];
-        $this->initialize();
+    }
+
+    /**
+     * @return \ReflectionClass
+     */
+    public function getMapperClass(): \ReflectionClass
+    {
+        return $this->mapperClass;
     }
 
     /**
@@ -55,9 +92,17 @@ class Mapper implements LoggerAwareInterface
         return $this->annotationReader;
     }
 
+    /**
+     * @return ValueConverter
+     */
+    public function getConverter(): ValueConverter
+    {
+        return $this->converter;
+    }
+
     public function hasMappingMethod(string $method): bool
     {
-        return isset($this->mappingMethods[$method]);
+        return isset($this->methodBody[$method]);
     }
 
     public function generateMethod(ClassMethod $originMethod): ClassMethod
@@ -67,10 +112,10 @@ class Mapper implements LoggerAwareInterface
             throw new \InvalidArgumentException('Unknown mapping method '.$this->mapperClass.'::'.$name);
         }
 
-        return $this->mappingMethods[$name]->generate($originMethod);
+        return $this->methodBody[$name];
     }
 
-    private function initialize(): void
+    public function initialize(): void
     {
         $mapperAnnotation = $this->annotationReader->getClassAnnotation($this->mapperClass, annotations\Mapper::class);
         if (null === $mapperAnnotation) {
@@ -79,47 +124,72 @@ class Mapper implements LoggerAwareInterface
         foreach ($this->mapperClass->getMethods() as $method) {
             $mappingMethod = $this->createMappingMethod($method);
             if (null !== $mappingMethod) {
-                $mappingMethod->setLogger($this->logger);
                 $this->mappingMethods[$method->getName()] = $mappingMethod;
             }
         }
+        if (empty($this->mappingMethods)) {
+            $this->logger->debug(static::TAG.$this->mapperClass->getName().' has no mapping method');
+
+            return;
+        }
+        $class = ClassGenerator::fromReflection(new ClassReflection($this->mapperClass->getName()));
+        $class->removeMethod('getInstance');
+        foreach ($class->getMethods() as $method) {
+            if (isset($this->mappingMethods[$method->getName()])) {
+                $method->setBody($this->mappingMethods[$method->getName()]->generate());
+            }
+        }
+
+        $file = new FileGenerator();
+        $file->setClass($class);
+
+        $code = $file->generate();
+        // echo $code;
+        $stmts = $this->parser->parse($code);
+        $nodeTraverser = new NodeTraverser();
+        $visitor = new class() extends NodeVisitorAbstract {
+            public $methods;
+
+            public function enterNode(Node $node)
+            {
+                if ($node instanceof Node\Stmt\ClassMethod) {
+                    $this->methods[(string) $node->name] = $node;
+                }
+            }
+        };
+        $nodeTraverser->addVisitor($visitor);
+        $nodeTraverser->traverse($stmts);
+        $this->methodBody = $visitor->methods;
     }
 
     private function createMappingMethod(\ReflectionMethod $method): ?MappingMethod
     {
-        $methodName = $method->getDeclaringClass()->getName().'::'.$method->getName();
-        if (!$method->isPublic() || $method->isStatic()) {
-            if (!$method->isPublic()) {
-                $this->logger->debug(static::TAG."skip $methodName because not public");
-            } else {
-                $this->logger->debug(static::TAG."skip $methodName because it is static");
-            }
-
+        if (!$method->isPublic() || $method->isStatic() || $method->isConstructor()) {
             return null;
         }
-        $parameters = $method->getParameters();
         $returnType = $method->getReturnType();
-        $mappingTargetClass = null;
-        $mappingSourceClass = null;
         if (null === $returnType || ($returnType->isBuiltin() && 'void' === $returnType->getName())) {
             // 返回值为空
-            $updateTarget = true;
-            [$mappingTargetClass, $mappingSourceClass] = $this->getMappingSourceAndTarget($parameters);
+            [$source, $target] = $this->getMappingSourceAndTarget($method);
         } elseif (null !== $returnType && !$returnType->isBuiltin()) {
             // 返回值为 MappingTarget
-            $updateTarget = false;
-            $mappingTargetClass = $returnType->getName();
-            $mappingSourceClass = $this->getMappingSource($parameters);
+            $target = new MappingTarget($this->docReader, $returnType->getName(), null);
+            $source = $this->getMappingSource($method);
         }
-        if (isset($mappingSourceClass, $mappingTargetClass)) {
-            return new MappingMethod($this, $method, $mappingSourceClass, $mappingTargetClass, $updateTarget);
+        if (isset($source, $target)) {
+            $mappingMethod = new MappingMethod($this, $method, $source, $target);
+            $mappingMethod->setLogger($this->logger);
+
+            return $mappingMethod;
         }
 
         return null;
     }
 
-    private function getMappingSource(array $parameters): ?string
+    private function getMappingSource(\ReflectionMethod $method): ?MappingSource
     {
+        $methodName = $method->getDeclaringClass()->getName().'::'.$method->getName();
+        $parameters = $method->getParameters();
         if (1 === count($parameters)) {
             $parameterType = $parameters[0]->getType();
             if (null === $parameterType || $parameterType->isBuiltin()) {
@@ -128,10 +198,10 @@ class Mapper implements LoggerAwareInterface
                 return null;
             }
 
-            return $parameterType->getName();
+            return new MappingSource($this->docReader, $parameterType->getName(), $parameters[0]->getName());
         }
-        /** @var MappingSource|null $source */
-        $source = $this->annotationReader->getMethodAnnotation($method, MappingSource::class);
+        /** @var MappingSourceAnnotation|null $source */
+        $source = $this->annotationReader->getMethodAnnotation($method, MappingSourceAnnotation::class);
         if (null === $source) {
             $this->logger->debug(static::TAG."skip $methodName because source parameter is specified");
 
@@ -140,12 +210,7 @@ class Mapper implements LoggerAwareInterface
         foreach ($parameters as $parameter) {
             /** @var \ReflectionParameter $parameter */
             if ($parameter->getName() === $source->value) {
-                $type = $parameter->getType();
-                if (null === $type || $type->isBuiltin()) {
-                    throw new \InvalidArgumentException("$methodName parameter {$parameter->getName()} ".'annotated with @MapSource but has no class type');
-                }
-
-                return $type->getName();
+                return $this->createMappingSource($parameter);
             }
         }
         $this->logger->debug(static::TAG."skip $methodName because their is not parameter match @MapSource value");
@@ -153,44 +218,81 @@ class Mapper implements LoggerAwareInterface
         return null;
     }
 
-    private function getMappingSourceAndTarget(array $parameters): array
+    private function getMappingSourceAndTarget(\ReflectionMethod $method): array
     {
+        $methodName = $method->getDeclaringClass()->getName().'::'.$method->getName();
+        $parameters = $method->getParameters();
         if (count($parameters) < 2) {
             $this->logger->debug(static::TAG."skip $methodName because there is only one parameter");
 
             return [null, null];
         }
-        /** @var MappingSource|null $source */
-        $source = $this->annotationReader->getMethodAnnotation($method, MappingSource::class);
-        /** @var MappingTarget|null $source */
-        $target = $this->annotationReader->getMethodAnnotation($method, MappingTarget::class);
+        /** @var MappingSourceAnnotation|null $source */
+        $source = $this->annotationReader->getMethodAnnotation($method, MappingSourceAnnotation::class);
+        /** @var MappingTargetAnnotation|null $source */
+        $target = $this->annotationReader->getMethodAnnotation($method, MappingTargetAnnotation::class);
 
         if (null === $source && null === $target) {
             $this->logger->debug(static::TAG."skip $methodName because there is not @MappingTarget or @MappingSource");
+
+            return [null, null];
         }
 
         $parameters = Arrays::assoc($parameters, 'name');
         if (2 === count($parameters)) {
-            return $parameterType->getName();
-        }
-        if (null === $source) {
-            $this->logger->debug(static::TAG."skip $methodName because source parameter is specified");
-
-            return null;
-        }
-        foreach ($parameters as $parameter) {
-            /** @var \ReflectionParameter $parameter */
-            if ($parameter->getName() === $source->value) {
-                $type = $parameter->getType();
-                if (null === $type || $type->isBuiltin()) {
-                    throw new \InvalidArgumentException("$methodName parameter {$parameter->getName()} ".'annotated with @MapSource but has no class type');
+            if (null !== $source) {
+                if (!isset($parameters[$source->value])) {
+                    throw new \InvalidArgumentException("$methodName @MappingSource parameter {$source->value} does not exist");
                 }
-
-                return $type->getName();
+                $sourceParameter = $parameters[$source->value];
+                unset($parameters[$source->value]);
+                $targetParameter = array_values($parameters)[0];
+            } else {
+                if (!isset($parameters[$target->value])) {
+                    throw new \InvalidArgumentException("$methodName @MappingTarget parameter {$target->value} does not exist");
+                }
+                $targetParameter = $parameters[$target->value];
+                unset($parameters[$target->value]);
+                $sourceParameter = array_values($parameters)[0];
             }
+        } else {
+            if (null === $source) {
+                throw new \InvalidArgumentException("$methodName @MappingSource is missing");
+            }
+            if (null === $target) {
+                throw new \InvalidArgumentException("$methodName @MappingTarget is missing");
+            }
+            $sourceParameter = $parameters[$source->value];
+            $targetParameter = $parameters[$target->value];
         }
-        $this->logger->debug(static::TAG."skip $methodName because their is not parameter match @MapSource value");
 
-        return null;
+        return [
+            $this->createMappingSource($sourceParameter),
+            $this->createMappingTarget($targetParameter),
+        ];
+    }
+
+    private function createMappingSource(\ReflectionParameter $parameter): MappingSource
+    {
+        $type = $parameter->getType();
+        if (null === $type || $type->isBuiltin()) {
+            $function = $parameter->getDeclaringFunction();
+            $methodName = $function->getName();
+            throw new \InvalidArgumentException("$methodName parameter {$parameter->getName()} ".'annotated with @MapSource but has no class type');
+        }
+
+        return new MappingSource($this->docReader, $type->getName(), $parameter->getName());
+    }
+
+    private function createMappingTarget(\ReflectionParameter $parameter): MappingTarget
+    {
+        $type = $parameter->getType();
+        if (null === $type || $type->isBuiltin()) {
+            $function = $parameter->getDeclaringFunction();
+            $methodName = $function->getName();
+            throw new \InvalidArgumentException("$methodName parameter {$parameter->getName()} ".'annotated with @MapSource but has no class type');
+        }
+
+        return new MappingTarget($this->docReader, $type->getName(), $parameter->getName());
     }
 }

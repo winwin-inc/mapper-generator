@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace wenbinye\mapper;
+namespace winwin\mapper;
 
 use Composer\Autoload\ClassLoader;
 use Symfony\Component\Console\Command\Command;
@@ -11,6 +11,13 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Finder\Finder;
+use winwin\mapper\converter\DateTimeStringConverter;
+use winwin\mapper\converter\EnumIntConverter;
+use winwin\mapper\converter\EnumStringConverter;
+use winwin\mapper\converter\IntEnumConverter;
+use winwin\mapper\converter\PrimitiveConverter;
+use winwin\mapper\converter\StringDateTimeConverter;
+use winwin\mapper\converter\StringEnumConverter;
 
 class GenerateCommand extends Command
 {
@@ -34,8 +41,11 @@ class GenerateCommand extends Command
         $loader->unregister();
         $loader->register(false);
 
-        $generator = new MapperGenerator(AnnotationReader::getInstance());
+        $generator = new MapperGenerator(AnnotationReader::getInstance(), $this->createValueConverter());
         $generator->setLogger(new ConsoleLogger($output));
+        if (file_exists($projectPath.'/.mapper-config')) {
+            require $projectPath.'/.mapper-config';
+        }
         $path = $input->getArgument('path');
         if (is_file($path)) {
             $generator->replaceInFile($path);
@@ -47,10 +57,25 @@ class GenerateCommand extends Command
                 ->notPath('vendor')
                 ->in($path);
             foreach ($finder as $file) {
-                $generator->replaceInFile($file);
+                $output->writeln("<info>process {$file->getPathname()}</info>");
+                $generator->replaceInFile($file->getPathname());
             }
         }
 
         return 0;
+    }
+
+    public function createValueConverter(): ValueConverter
+    {
+        $converter = new ValueConverter();
+        $converter->addConverter(new PrimitiveConverter());
+        $converter->addConverter(new IntEnumConverter());
+        $converter->addConverter(new EnumIntConverter());
+        $converter->addConverter(new StringEnumConverter());
+        $converter->addConverter(new EnumStringConverter());
+        $converter->addConverter(new StringDateTimeConverter());
+        $converter->addConverter(new DateTimeStringConverter());
+
+        return $converter;
     }
 }
