@@ -12,12 +12,14 @@ class DateTimeStringConverter implements Converter
     public function support(ReflectionTypeInterface $from, ReflectionTypeInterface $to): bool
     {
         return $from->isClass()
-            && is_subclass_of($from->getName(), \DateTime::class)
+            && is_a($from->getName(), \DateTime::class, true)
             && 'string' === $to->getName();
     }
 
     public function convert(CastContext $context): string
     {
-        return $context->getValue().'->format('.var_export($context->getMapping()->dateFormat ?? 'Y-m-d H:i:s', true).')';
+        return sprintf('%s->format(%s)',
+            $context->getValue(),
+            var_export($context->getMapping()->dateFormat ?? 'Y-m-d H:i:s', true));
     }
 }

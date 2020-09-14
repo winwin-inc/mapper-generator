@@ -33,6 +33,7 @@ class MapperGeneratorTest extends TestCase
         $mapperGenerator = new MapperGenerator(AnnotationReader::getInstance(), $this->createValueConverter());
         $mapperGenerator->setLogger(new ConsoleLogger(new ConsoleOutput()));
         $code = $mapperGenerator->generate(__DIR__.'/fixtures/OrderItemMapper.php');
+        echo $code;
         $this->assertNotEmpty($code);
     }
 

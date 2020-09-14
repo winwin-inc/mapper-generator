@@ -12,4 +12,8 @@ use Doctrine\Common\Annotations\Annotation\Target;
  */
 class AfterMapping
 {
+    /**
+     * @var array
+     */
+    public $value;
 }

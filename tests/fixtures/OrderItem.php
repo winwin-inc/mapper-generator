@@ -17,6 +17,11 @@ class OrderItem
     private $quantity;
 
     /**
+     * @var \DateTime|null
+     */
+    private $createTime;
+
+    /**
      * @return string|null
      */
     public function getName(): ?string
@@ -46,5 +51,13 @@ class OrderItem
     public function setQuantity(?int $quantity): void
     {
         $this->quantity = $quantity;
+    }
+
+    /**
+     * @return \DateTime|null
+     */
+    public function getCreateTime(): ?\DateTime
+    {
+        return $this->createTime;
     }
 }

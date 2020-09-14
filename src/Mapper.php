@@ -18,6 +18,7 @@ use PhpParser\NodeVisitorAbstract;
 use PhpParser\Parser;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use winwin\mapper\annotations\AfterMapping;
 use winwin\mapper\annotations\MappingSource as MappingSourceAnnotation;
 use winwin\mapper\annotations\MappingTarget as MappingTargetAnnotation;
 
@@ -26,6 +27,11 @@ class Mapper implements LoggerAwareInterface
     use LoggerAwareTrait;
 
     protected const TAG = '['.__CLASS__.'] ';
+
+    /**
+     * @var MapperVisitor
+     */
+    private $mapperVisitor;
 
     /**
      * @var Reader
@@ -66,11 +72,12 @@ class Mapper implements LoggerAwareInterface
      * @param Reader           $annotationReader
      * @param \ReflectionClass $mapperClass
      */
-    public function __construct(Reader $annotationReader, ValueConverter $converter, Parser $parser, \ReflectionClass $mapperClass)
+    public function __construct(MapperVisitor $visitor, \ReflectionClass $mapperClass)
     {
-        $this->annotationReader = $annotationReader;
-        $this->converter = $converter;
-        $this->parser = $parser;
+        $this->mapperVisitor = $visitor;
+        $this->annotationReader = $visitor->getAnnotationReader();
+        $this->converter = $visitor->getConverter();
+        $this->parser = $visitor->getParser();
         $this->docReader = new DocReader();
         $this->mapperClass = $mapperClass;
         $this->mappingMethods = [];
@@ -100,9 +107,34 @@ class Mapper implements LoggerAwareInterface
         return $this->converter;
     }
 
+    /**
+     * @return Parser
+     */
+    public function getParser(): Parser
+    {
+        return $this->parser;
+    }
+
+    /**
+     * @return DocReaderInterface
+     */
+    public function getDocReader(): DocReaderInterface
+    {
+        return $this->docReader;
+    }
+
     public function hasMappingMethod(string $method): bool
     {
         return isset($this->methodBody[$method]);
+    }
+
+    public function getMappingMethod(string $method): MappingMethod
+    {
+        if (!isset($this->mappingMethods[$method])) {
+            throw new \InvalidArgumentException("Unknown mapping method $method");
+        }
+
+        return $this->mappingMethods[$method];
     }
 
     public function generateMethod(ClassMethod $originMethod): ClassMethod
@@ -113,6 +145,11 @@ class Mapper implements LoggerAwareInterface
         }
 
         return $this->methodBody[$name];
+    }
+
+    public function getClassAlias(string $className): ?string
+    {
+        return $this->mapperVisitor->getClassAlias($className);
     }
 
     public function initialize(): void
@@ -144,7 +181,7 @@ class Mapper implements LoggerAwareInterface
         $file->setClass($class);
 
         $code = $file->generate();
-        // echo $code;
+//         echo $code;
         $stmts = $this->parser->parse($code);
         $nodeTraverser = new NodeTraverser();
         $visitor = new class() extends NodeVisitorAbstract {
@@ -294,5 +331,19 @@ class Mapper implements LoggerAwareInterface
         }
 
         return new MappingTarget($this->docReader, $type->getName(), $parameter->getName());
+    }
+
+    public function getAfterMapping(MappingMethod $mappingMethod): ?\ReflectionMethod
+    {
+        // TODO 根据参数匹配
+        foreach ($this->mapperClass->getMethods() as $method) {
+            /** @var AfterMapping $afterMapping */
+            $afterMapping = $this->annotationReader->getMethodAnnotation($method, AfterMapping::class);
+            if (null !== $afterMapping && in_array($mappingMethod->getName(), $afterMapping->value, true)) {
+                return $method;
+            }
+        }
+
+        return null;
     }
 }

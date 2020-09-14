@@ -15,11 +15,12 @@ class Mapping
 {
     /**
      * @var string
-     * @Required()
      */
     public $source;
 
     /**
+     * @Required()
+     *
      * @var string
      */
     public $target;
@@ -48,6 +49,11 @@ class Mapping
      * @var string
      */
     public $expression;
+
+    /**
+     * @var string
+     */
+    public $condition;
 
     /**
      * @var string

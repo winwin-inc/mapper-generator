@@ -16,6 +16,6 @@ class PrimitiveConverter implements Converter
 
     public function convert(CastContext $context): string
     {
-        return '('.$context->getCastType()->getName().')'.$context->getValue();
+        return sprintf('(%s) %s', $context->getCastType()->getName(), $context->getValue());
     }
 }

@@ -64,6 +64,30 @@ class MapperVisitor extends NodeVisitorAbstract implements LoggerAwareInterface
     }
 
     /**
+     * @return Reader
+     */
+    public function getAnnotationReader(): Reader
+    {
+        return $this->annotationReader;
+    }
+
+    /**
+     * @return ValueConverter
+     */
+    public function getConverter(): ValueConverter
+    {
+        return $this->converter;
+    }
+
+    /**
+     * @return Parser
+     */
+    public function getParser(): Parser
+    {
+        return $this->parser;
+    }
+
+    /**
      * @return Mapper[]
      */
     public function getMappers(): array
@@ -86,7 +110,7 @@ class MapperVisitor extends NodeVisitorAbstract implements LoggerAwareInterface
                     if (null === $use->alias) {
                         $this->importNames[$use->name->getLast()] = $use->name->toCodeString();
                     } else {
-                        $this->importNames[$use->alias] = $use->name->toCodeString();
+                        $this->importNames[$use->alias->toString()] = $use->name->toCodeString();
                     }
                 }
             }
@@ -105,14 +129,16 @@ class MapperVisitor extends NodeVisitorAbstract implements LoggerAwareInterface
             if (null === $mapper) {
                 return NodeTraverser::STOP_TRAVERSAL;
             }
-            $this->mapper = new Mapper($this->annotationReader, $this->converter, $this->parser, $mapperClass);
+            $this->mapper = new Mapper($this, $mapperClass);
             $this->mapper->setLogger($this->logger);
             $this->mapper->initialize();
             $this->mappers[] = $this->mapper;
         } elseif ($node instanceof Node\Stmt\ClassMethod
             && null !== $this->mapper
             && $this->mapper->hasMappingMethod((string) $node->name)) {
-            return $this->mapper->generateMethod($node);
+            $stmts = $this->mapper->generateMethod($node);
+
+            return $this->replaceWithImport($stmts);
         }
 
         return null;
@@ -139,5 +165,53 @@ class MapperVisitor extends NodeVisitorAbstract implements LoggerAwareInterface
         }
 
         return $this->namespace.'\\'.$className;
+    }
+
+    public function getClassAlias(string $className): ?string
+    {
+        $key = array_search(ltrim($className, '\\'), $this->importNames, true);
+        if (false !== $key) {
+            return $key;
+        }
+
+        return null;
+    }
+
+    public function toRelativeName(Node\Name\FullyQualified $node): Node\Name
+    {
+        $key = array_search(ltrim($node->toCodeString(), '\\'), $this->importNames, true);
+        if (false !== $key) {
+            return new Node\Name($key, $node->getAttributes());
+        }
+        $namespace = $node->slice(0, -1);
+        if (null !== $namespace && ltrim($namespace->toCodeString(), '\\') === $this->namespace) {
+            return new Node\Name($node->getLast(), $node->getAttributes());
+        }
+
+        return $node;
+    }
+
+    private function replaceWithImport(Node\Stmt\ClassMethod $stmts): Node\Stmt\ClassMethod
+    {
+        $nodeTraverser = new NodeTraverser();
+        $visitor = new class() extends NodeVisitorAbstract {
+            /**
+             * @var MapperVisitor
+             */
+            public $mapper;
+
+            public function enterNode(Node $node)
+            {
+                if ($node instanceof Node\Name\FullyQualified) {
+                    return $this->mapper->toRelativeName($node);
+                }
+
+                return null;
+            }
+        };
+        $visitor->mapper = $this;
+        $nodeTraverser->addVisitor($visitor);
+
+        return $nodeTraverser->traverse([$stmts])[0];
     }
 }

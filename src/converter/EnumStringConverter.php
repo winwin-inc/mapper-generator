@@ -19,6 +19,6 @@ class EnumStringConverter implements Converter
 
     public function convert(CastContext $context): string
     {
-        return $context->getValue().'->name';
+        return sprintf('%s->name', $context->getValue());
     }
 }

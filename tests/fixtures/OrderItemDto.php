@@ -15,4 +15,9 @@ class OrderItemDto
      * @var int|null
      */
     public $quantity;
+
+    /**
+     * @var string|null
+     */
+    public $createTime;
 }

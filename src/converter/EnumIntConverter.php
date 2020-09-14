@@ -19,6 +19,6 @@ class EnumIntConverter implements Converter
 
     public function convert(CastContext $context): string
     {
-        return $context->getValue().'->ordinal()';
+        return sprintf('%s->ordinal()', $context->getValue());
     }
 }

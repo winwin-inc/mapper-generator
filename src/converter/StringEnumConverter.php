@@ -19,6 +19,7 @@ class StringEnumConverter implements Converter
 
     public function convert(CastContext $context): string
     {
-        return $context->getCastType()->getName().'::fromName(strtoupper('.$context->getValue().'))';
+        return sprintf('%s::fromName(strtoupper(%s))',
+            $context->getCastType()->getName(), $context->getValue());
     }
 }
