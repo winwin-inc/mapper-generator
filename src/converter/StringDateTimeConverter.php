@@ -20,7 +20,7 @@ class StringDateTimeConverter implements Converter
     public function convert(CastContext $context): string
     {
         if (class_exists(Carbon::class)) {
-            if (null !== $context->getMapping()->dateFormat) {
+            if (null === $context->getMapping()->dateFormat) {
                 return sprintf('\Carbon\Carbon::parse(%s)', $context->getValue());
             } else {
                 return sprintf('\Carbon\Carbon::createFromFormat(%s, %s)',
