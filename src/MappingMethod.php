@@ -94,7 +94,7 @@ class MappingMethod implements LoggerAwareInterface
                     }
                 }
             }
-            /** @var InheritConfiguration $inherit */
+            /** @var InheritConfiguration|null $inherit */
             $inherit = $this->mapper->getAnnotationReader()->getMethodAnnotation($this->method, InheritConfiguration::class);
             if (null !== $inherit) {
                 try {
@@ -107,7 +107,7 @@ class MappingMethod implements LoggerAwareInterface
                     throw new \InvalidArgumentException("{$this->getMethodName()} @InheritConfiguration method {$inherit->value} not found");
                 }
             }
-            /** @var InheritInverseConfiguration $inverse */
+            /** @var InheritInverseConfiguration|null $inverse */
             $inverse = $this->mapper->getAnnotationReader()->getMethodAnnotation($this->method, InheritInverseConfiguration::class);
             if (null !== $inverse) {
                 try {
@@ -198,7 +198,6 @@ class MappingMethod implements LoggerAwareInterface
             }
             ++$i;
         }
-        throw new \LogicException('Cannot generate parameter name');
     }
 
     private function generateMappingCode(MappingTargetField $field, ?MappingSourceField $sourceField, Mapping $mapping): void
@@ -298,7 +297,10 @@ class MappingMethod implements LoggerAwareInterface
 
     private function generateReturn(): void
     {
-        $this->codes[] = 'return $'.$this->target->getParameterName().';';
+        $returnType = $this->method->getReturnType();
+        if (null !== $returnType && 'void' !== $returnType->getName()) {
+            $this->codes[] = 'return $'.$this->target->getParameterName().';';
+        }
     }
 
     /**

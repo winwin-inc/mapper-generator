@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace winwin\mapper\fixtures;
 
-use winwin\mapper\annotations\InheritInverseConfiguration;
 use winwin\mapper\annotations\Mapper;
 use winwin\mapper\MapperTrait;
 
@@ -19,9 +18,6 @@ class OrderItemMapper
     {
     }
 
-    /**
-     * @InheritInverseConfiguration()
-     */
     public function fromOrder(OrderItem $orderItem): OrderItemDto
     {
     }

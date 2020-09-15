@@ -116,6 +116,8 @@ class MapperVisitor extends NodeVisitorAbstract implements LoggerAwareInterface
             }
             break;
         }
+
+        return null;
     }
 
     /**
@@ -136,9 +138,10 @@ class MapperVisitor extends NodeVisitorAbstract implements LoggerAwareInterface
         } elseif ($node instanceof Node\Stmt\ClassMethod
             && null !== $this->mapper
             && $this->mapper->hasMappingMethod((string) $node->name)) {
-            $stmts = $this->mapper->generateMethod($node);
+            $method = $this->mapper->generateMethod($node);
+            $node->stmts = $method->stmts;
 
-            return $this->replaceWithImport($stmts);
+            return $this->replaceWithImport($node);
         }
 
         return null;
@@ -152,19 +155,23 @@ class MapperVisitor extends NodeVisitorAbstract implements LoggerAwareInterface
         if ($node instanceof Node\Stmt\Class_) {
             $this->mapper = null;
         }
+
+        return null;
     }
 
-    private function getClassName(Node $name): string
+    /**
+     * @param Node\Identifier|Node\Name $name
+     *
+     * @return string
+     */
+    private function getClassName($name): string
     {
         if ($name instanceof Node\Name && $name->isFullyQualified()) {
             return $name->toCodeString();
         }
-        $className = (string) $name;
-        if (isset($this->importNames[$className])) {
-            return $this->importNames[$className];
-        }
+        $className = $name->toString();
 
-        return $this->namespace.'\\'.$className;
+        return $this->importNames[$className] ?? ($this->namespace.'\\'.$className);
     }
 
     public function getClassAlias(string $className): ?string
@@ -191,7 +198,7 @@ class MapperVisitor extends NodeVisitorAbstract implements LoggerAwareInterface
         return $node;
     }
 
-    private function replaceWithImport(Node\Stmt\ClassMethod $stmts): Node\Stmt\ClassMethod
+    private function replaceWithImport(Node\Stmt\ClassMethod $stmts): Node
     {
         $nodeTraverser = new NodeTraverser();
         $visitor = new class() extends NodeVisitorAbstract {

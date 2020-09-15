@@ -66,12 +66,6 @@ class Mapper implements LoggerAwareInterface
      */
     private $methodBody;
 
-    /**
-     * Mapper constructor.
-     *
-     * @param Reader           $annotationReader
-     * @param \ReflectionClass $mapperClass
-     */
     public function __construct(MapperVisitor $visitor, \ReflectionClass $mapperClass)
     {
         $this->mapperVisitor = $visitor;
@@ -193,6 +187,9 @@ class Mapper implements LoggerAwareInterface
         }
         $nodeTraverser = new NodeTraverser();
         $visitor = new class() extends NodeVisitorAbstract {
+            /**
+             * @var array
+             */
             public $methods;
 
             public function enterNode(Node $node)
@@ -200,6 +197,8 @@ class Mapper implements LoggerAwareInterface
                 if ($node instanceof Node\Stmt\ClassMethod) {
                     $this->methods[(string) $node->name] = $node;
                 }
+
+                return null;
             }
         };
         $nodeTraverser->addVisitor($visitor);
@@ -216,7 +215,7 @@ class Mapper implements LoggerAwareInterface
         if (null === $returnType || ($returnType->isBuiltin() && 'void' === $returnType->getName())) {
             // 返回值为空
             [$source, $target] = $this->getMappingSourceAndTarget($method);
-        } elseif (null !== $returnType && !$returnType->isBuiltin()) {
+        } elseif (!$returnType->isBuiltin()) {
             // 返回值为 MappingTarget
             $target = new MappingTarget($this->docReader, $returnType->getName(), null);
             $source = $this->getMappingSource($method);
@@ -345,7 +344,7 @@ class Mapper implements LoggerAwareInterface
     {
         // TODO 根据参数匹配
         foreach ($this->mapperClass->getMethods() as $method) {
-            /** @var AfterMapping $afterMapping */
+            /** @var AfterMapping|null $afterMapping */
             $afterMapping = $this->annotationReader->getMethodAnnotation($method, AfterMapping::class);
             if (null !== $afterMapping && in_array($mappingMethod->getName(), $afterMapping->value, true)) {
                 return $method;
