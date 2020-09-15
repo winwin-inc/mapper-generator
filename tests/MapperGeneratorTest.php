@@ -24,7 +24,7 @@ use winwin\mapper\converter\StringDateTimeConverter;
 use winwin\mapper\converter\StringEnumConverter;
 use winwin\mapper\fixtures\OrderItem;
 use winwin\mapper\fixtures\OrderItemMapper;
-use winwin\mapper\fixtures\SimpleMapper;
+use winwin\mapper\fixtures\UpdateCustomerMapper;
 
 class MapperGeneratorTest extends TestCase
 {
@@ -42,6 +42,15 @@ class MapperGeneratorTest extends TestCase
         $mapperGenerator = new MapperGenerator(AnnotationReader::getInstance(), $this->createValueConverter());
         $mapperGenerator->setLogger(new ConsoleLogger(new ConsoleOutput()));
         $code = $mapperGenerator->generate(__DIR__.'/fixtures/CustomerMapper.php');
+        echo $code;
+        $this->assertNotEmpty($code);
+    }
+
+    public function testUpdateMapper()
+    {
+        $mapperGenerator = new MapperGenerator(AnnotationReader::getInstance(), $this->createValueConverter());
+        $mapperGenerator->setLogger(new ConsoleLogger(new ConsoleOutput()));
+        $code = $mapperGenerator->generate(__DIR__.'/fixtures/UpdateCustomerMapper.php');
         echo $code;
         $this->assertNotEmpty($code);
     }
@@ -135,7 +144,7 @@ class MapperGeneratorTest extends TestCase
 
     public function testCodeGen()
     {
-        $class = new \ReflectionClass(SimpleMapper::class);
+        $class = new \ReflectionClass(UpdateCustomerMapper::class);
         $method = $class->getMethod('updateCustomer');
         $type = $method->getReturnType();
         echo $method.' return type '.$type, "\n";

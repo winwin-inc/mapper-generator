@@ -3,6 +3,11 @@
 受 [mapstruct](https://mapstruct.org/) 项目启发，移植相关功能。
 
 ## 快速开始
+
+```bash
+composer require --dev winwin/mapper-generator
+```
+
 首先在项目中声明 mapper 类：
 
 ```php
@@ -19,6 +24,10 @@ class CustomerMapper
     {
     }
 }
+```
+
+```bash
+./vendor/bin/mapper-generator src/application/mapper
 ```
 
 mapper 方法具有以下特征：

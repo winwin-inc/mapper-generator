@@ -68,15 +68,6 @@ class MappingSource
             }
             if ($property->isPublic()) {
                 $fields[$property->getName()] = new MappingSourceField($this, $property->getName(), $property, null);
-            } else {
-                $name = ucfirst($property->getName());
-                foreach (['get'.$name, 'is'.$name, 'has'.$name] as $getter) {
-                    if ($this->sourceClass->hasMethod($getter)) {
-                        $method = $this->sourceClass->getMethod($getter);
-                        $fields[$property->getName()] = new MappingSourceField($this, $property->getName(), null, $method);
-                        break;
-                    }
-                }
             }
         }
         foreach ($this->sourceClass->getMethods() as $method) {

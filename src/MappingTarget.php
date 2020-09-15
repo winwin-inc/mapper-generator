@@ -86,11 +86,16 @@ class MappingTarget
             }
             if ($property->isPublic()) {
                 $fields[$property->getName()] = new MappingTargetField($this, $property->getName(), $property, null);
-            } else {
-                $setter = 'set'.ucfirst($property->getName());
-                if ($this->targetClass->hasMethod($setter)) {
-                    $method = $this->targetClass->getMethod($setter);
-                    $fields[$property->getName()] = new MappingTargetField($this, $property->getName(), null, $method);
+            }
+        }
+        foreach ($this->targetClass->getMethods() as $method) {
+            if (!$method->isPublic() || $method->isStatic() || 1 !== count($method->getParameters())) {
+                continue;
+            }
+            if (preg_match('/^set(.*)$/', $method->getName(), $matches)) {
+                $name = lcfirst($matches[1]);
+                if (!isset($fields[$name])) {
+                    $fields[$name] = new MappingTargetField($this, $name, null, $method);
                 }
             }
         }

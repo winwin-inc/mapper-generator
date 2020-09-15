@@ -51,6 +51,9 @@ class Mapping
     public $expression;
 
     /**
+     * an expression to test source value, can use `%s` to replace the value,
+     * for example condition="ctype_upper(%s)".
+     *
      * @var string
      */
     public $condition;

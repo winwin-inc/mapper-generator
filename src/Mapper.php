@@ -181,8 +181,16 @@ class Mapper implements LoggerAwareInterface
         $file->setClass($class);
 
         $code = $file->generate();
-//         echo $code;
-        $stmts = $this->parser->parse($code);
+        try {
+            $stmts = $this->parser->parse($code);
+        } catch (\Exception $e) {
+            $this->logger->error(static::TAG."parse {$this->mapperClass->getName()} mapper fail: ".$e->getMessage());
+            foreach (explode("\n", $code) as $i => $line) {
+                echo sprintf("%3d %s\n", $i + 1, $line);
+            }
+
+            return;
+        }
         $nodeTraverser = new NodeTraverser();
         $visitor = new class() extends NodeVisitorAbstract {
             public $methods;

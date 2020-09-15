@@ -209,7 +209,7 @@ class MappingMethod implements LoggerAwareInterface
             $valueExpression = $this->generateValueExpression($field, $mapping);
         }
         if (null !== $mapping->condition) {
-            $this->codes[] = 'if ('.$valueExpression.$mapping->condition.') {';
+            $this->codes[] = 'if ('.$this->generateCondition($mapping->condition, $valueExpression).') {';
         }
         if ($field->getType()->allowsNull()) {
             $this->codes[] = $field->generate($valueExpression);
@@ -332,6 +332,15 @@ class MappingMethod implements LoggerAwareInterface
             $this->codes[] = sprintf('$this->%s($%s, $%s);', $afterMappingMethod->getName(), $this->source->getParameterName(), $this->target->getParameterName());
         } else {
             $this->codes[] = sprintf('$this->%s($%s, $%s);', $afterMappingMethod->getName(), $this->target->getParameterName(), $this->source->getParameterName());
+        }
+    }
+
+    private function generateCondition(string $condition, string $valueExpression): string
+    {
+        if (false !== strpos($condition, '%s')) {
+            return sprintf($condition, $valueExpression);
+        } else {
+            return $valueExpression.$condition;
         }
     }
 }
