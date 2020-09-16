@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 namespace winwin\mapper;
 
+use PhpParser\Node;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitorAbstract;
+use PhpParser\ParserFactory;
+use PhpParser\PrettyPrinter\Standard;
 use PHPUnit\Framework\TestCase;
+use Roave\BetterReflection\Reflection\ReflectionClass;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use winwin\mapper\converter\DateTimeStringConverter;
@@ -14,6 +20,7 @@ use winwin\mapper\converter\IntEnumConverter;
 use winwin\mapper\converter\PrimitiveConverter;
 use winwin\mapper\converter\StringDateTimeConverter;
 use winwin\mapper\converter\StringEnumConverter;
+use winwin\mapper\fixtures\UpdateCustomerMapper;
 
 class MapperGeneratorTest extends TestCase
 {
@@ -51,5 +58,42 @@ class MapperGeneratorTest extends TestCase
         $converter->addConverter(new DateTimeStringConverter());
 
         return $converter;
+    }
+
+    public function testCodeGen()
+    {
+        $reflectionClass = ReflectionClass::createFromName(UpdateCustomerMapper::class);
+        $reflectionClass->getMethod('updateCustomer')->setBodyFromString('
+        $customer->setId($dto->id);
+        $customer->setName($dto->customerName);
+        ');
+        $printer = new Standard();
+
+        // echo $printer->prettyPrintFile([$reflectionClass->getDeclaringNamespaceAst()]);
+
+        $parserFactory = new ParserFactory();
+        $parser = $parserFactory->create(ParserFactory::ONLY_PHP7);
+        $stmts = $parser->parse(file_get_contents(__DIR__.'/fixtures/UpdateCustomerMapper.php'));
+        $nodeTraverser = new NodeTraverser();
+        $visitor = new class() extends NodeVisitorAbstract {
+            public $class;
+
+            public function enterNode(Node $node)
+            {
+                if ($node instanceof Node\Stmt\ClassMethod && 'updateCustomer' === $node->name->toString()) {
+                    $node->stmts = $this->class->getMethod('updateCustomer')->getBodyAst();
+
+                    return $node;
+                }
+
+                return null;
+            }
+        };
+        $visitor->class = $reflectionClass;
+        $nodeTraverser->addVisitor($visitor);
+        $result = $nodeTraverser->traverse($stmts);
+
+//        echo $printer->prettyPrintFile($result);
+        $this->assertTrue(true);
     }
 }

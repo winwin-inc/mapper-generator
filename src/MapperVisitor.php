@@ -137,9 +137,8 @@ class MapperVisitor extends NodeVisitorAbstract implements LoggerAwareInterface
             $this->mappers[] = $this->mapper;
         } elseif ($node instanceof Node\Stmt\ClassMethod
             && null !== $this->mapper
-            && $this->mapper->hasMappingMethod((string) $node->name)) {
-            $method = $this->mapper->generateMethod($node);
-            $node->stmts = $method->stmts;
+            && $this->mapper->hasMappingMethod($node->name->toString())) {
+            $node->stmts = $this->mapper->getBodyAst($node->name->toString());
 
             return $this->replaceWithImport($node);
         }

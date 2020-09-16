@@ -25,9 +25,9 @@
         "php": "^7.2",
         "doctrine/annotations": "^1.8",
         "kuiper/kuiper": "^0.5",
-        "laminas/laminas-code": "^3.4",
         "nikic/php-parser": "^4.9",
         "psr/log": "^1.1",
+        "roave/better-reflection": "^4.3",
         "symfony/console": "^5.1",
         "symfony/finder": "^5.1"
     },

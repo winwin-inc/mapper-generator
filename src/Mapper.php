@@ -8,16 +8,9 @@ use Doctrine\Common\Annotations\Reader;
 use kuiper\helper\Arrays;
 use kuiper\serializer\DocReader;
 use kuiper\serializer\DocReaderInterface;
-use Laminas\Code\Generator\ClassGenerator;
-use Laminas\Code\Generator\FileGenerator;
-use Laminas\Code\Reflection\ClassReflection;
-use PhpParser\Node;
-use PhpParser\Node\Stmt\ClassMethod;
-use PhpParser\NodeTraverser;
-use PhpParser\NodeVisitorAbstract;
-use PhpParser\Parser;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Roave\BetterReflection\Reflection\ReflectionClass;
 use winwin\mapper\annotations\AfterMapping;
 use winwin\mapper\annotations\MappingSource as MappingSourceAnnotation;
 use winwin\mapper\annotations\MappingTarget as MappingTargetAnnotation;
@@ -41,10 +34,6 @@ class Mapper implements LoggerAwareInterface
      * @var ValueConverter
      */
     private $converter;
-    /**
-     * @var Parser
-     */
-    private $parser;
 
     /**
      * @var DocReaderInterface
@@ -57,23 +46,23 @@ class Mapper implements LoggerAwareInterface
     private $mapperClass;
 
     /**
+     * @var ReflectionClass
+     */
+    private $betterReflectionClass;
+
+    /**
      * @var MappingMethod[]
      */
     private $mappingMethods;
-
-    /**
-     * @var array
-     */
-    private $methodBody;
 
     public function __construct(MapperVisitor $visitor, \ReflectionClass $mapperClass)
     {
         $this->mapperVisitor = $visitor;
         $this->annotationReader = $visitor->getAnnotationReader();
         $this->converter = $visitor->getConverter();
-        $this->parser = $visitor->getParser();
         $this->docReader = new DocReader();
         $this->mapperClass = $mapperClass;
+        $this->betterReflectionClass = ReflectionClass::createFromName($mapperClass->getName());
         $this->mappingMethods = [];
     }
 
@@ -102,14 +91,6 @@ class Mapper implements LoggerAwareInterface
     }
 
     /**
-     * @return Parser
-     */
-    public function getParser(): Parser
-    {
-        return $this->parser;
-    }
-
-    /**
      * @return DocReaderInterface
      */
     public function getDocReader(): DocReaderInterface
@@ -119,7 +100,18 @@ class Mapper implements LoggerAwareInterface
 
     public function hasMappingMethod(string $method): bool
     {
-        return isset($this->methodBody[$method]);
+        return isset($this->mappingMethods[$method]);
+    }
+
+    public function getBodyAst(string $method): array
+    {
+        if (!$this->hasMappingMethod($method)) {
+            throw new \InvalidArgumentException("Cannot generate method body for $method");
+        }
+        $reflectionMethod = $this->betterReflectionClass->getMethod($method);
+        $reflectionMethod->setBodyFromString($this->getMappingMethod($method)->generate());
+
+        return $reflectionMethod->getBodyAst();
     }
 
     public function getMappingMethod(string $method): MappingMethod
@@ -129,16 +121,6 @@ class Mapper implements LoggerAwareInterface
         }
 
         return $this->mappingMethods[$method];
-    }
-
-    public function generateMethod(ClassMethod $originMethod): ClassMethod
-    {
-        $name = (string) $originMethod->name;
-        if (!$this->hasMappingMethod($name)) {
-            throw new \InvalidArgumentException('Unknown mapping method '.$this->mapperClass.'::'.$name);
-        }
-
-        return $this->methodBody[$name];
     }
 
     public function getClassAlias(string $className): ?string
@@ -160,50 +142,7 @@ class Mapper implements LoggerAwareInterface
         }
         if (empty($this->mappingMethods)) {
             $this->logger->debug(static::TAG.$this->mapperClass->getName().' has no mapping method');
-
-            return;
         }
-        $class = ClassGenerator::fromReflection(new ClassReflection($this->mapperClass->getName()));
-        $class->removeMethod('getInstance');
-        foreach ($class->getMethods() as $method) {
-            if (isset($this->mappingMethods[$method->getName()])) {
-                $method->setBody($this->mappingMethods[$method->getName()]->generate());
-            }
-        }
-
-        $file = new FileGenerator();
-        $file->setClass($class);
-
-        $code = $file->generate();
-        try {
-            $stmts = $this->parser->parse($code);
-        } catch (\Exception $e) {
-            $this->logger->error(static::TAG."parse {$this->mapperClass->getName()} mapper fail: ".$e->getMessage());
-            foreach (explode("\n", $code) as $i => $line) {
-                echo sprintf("%3d %s\n", $i + 1, $line);
-            }
-
-            return;
-        }
-        $nodeTraverser = new NodeTraverser();
-        $visitor = new class() extends NodeVisitorAbstract {
-            /**
-             * @var array
-             */
-            public $methods;
-
-            public function enterNode(Node $node)
-            {
-                if ($node instanceof Node\Stmt\ClassMethod) {
-                    $this->methods[(string) $node->name] = $node;
-                }
-
-                return null;
-            }
-        };
-        $nodeTraverser->addVisitor($visitor);
-        $nodeTraverser->traverse($stmts);
-        $this->methodBody = $visitor->methods;
     }
 
     private function createMappingMethod(\ReflectionMethod $method): ?MappingMethod
