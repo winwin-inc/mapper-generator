@@ -161,7 +161,8 @@ class MappingMethod implements LoggerAwareInterface
             $this->generateMappingCode($field, $sourceField, $mapping);
         }
         if (!empty($missing)) {
-            $this->logger->error(static::TAG."{$this->getMethodName()} has unmapping fields ".implode(',', $missing));
+            $this->logger->error(static::TAG."{$this->getMethodName()} has unmapping fields, ".
+                                 'dismiss error by add @MappingIgnore({'.substr(json_encode($missing), 1, -1).'})');
         }
     }
 
