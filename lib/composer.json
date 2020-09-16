@@ -1,0 +1,23 @@
+{
+    "name": "winwin/mapper-generator-stub",
+    "description": "Generator for object property mapper",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ye Wenbin",
+            "email": "winwin@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "winwin\\mapper\\": "./"
+        }
+    },
+    "require": {
+        "php": "^7.2",
+        "doctrine/annotations": "^1.8"
+    }
+}
