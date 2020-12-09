@@ -109,7 +109,12 @@ class Mapper implements LoggerAwareInterface
             throw new \InvalidArgumentException("Cannot generate method body for $method");
         }
         $reflectionMethod = $this->betterReflectionClass->getMethod($method);
-        $reflectionMethod->setBodyFromString($this->getMappingMethod($method)->generate());
+        try {
+            $reflectionMethod->setBodyFromString($body = $this->getMappingMethod($method)->generate());
+        } catch (\PhpParser\Error $e) {
+            error_log("Generated code has error\n".$body);
+            throw $e;
+        }
 
         return $reflectionMethod->getBodyAst();
     }

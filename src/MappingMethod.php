@@ -154,7 +154,7 @@ class MappingMethod implements LoggerAwareInterface
             $sourceField = null;
             if (null !== $mapping->source) {
                 if (!isset($sourceFields[$mapping->source])) {
-                    throw new \InvalidArgumentException("{$this->getMethodName()} mapping '{$field->getName()}' target {$mapping->target} does not exist");
+                    throw new \InvalidArgumentException("{$this->getMethodName()} mapping '{$field->getName()}' source '{$mapping->source}' does not exist");
                 }
                 $sourceField = $sourceFields[$mapping->source];
             }
@@ -238,7 +238,7 @@ class MappingMethod implements LoggerAwareInterface
                 throw new \InvalidArgumentException($this->mapper->getMapperClass()->getName().'::'.$mapping->qualifiedByName.' should contain only one parameter');
             }
             $type = $reflectionParameters[0]->getType();
-            if ($type->allowsNull()) {
+            if (null !== $type && $type->allowsNull()) {
                 return '$this->'.$mapping->qualifiedByName.'('.$sourceField->getValue().')';
             } else {
                 $var = $this->generateVariableName($field->getName());
