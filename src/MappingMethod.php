@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace winwin\mapper;
 
 use kuiper\helper\Arrays;
+use kuiper\reflection\ReflectionType;
 use kuiper\reflection\ReflectionTypeInterface;
+use kuiper\reflection\type\MixedType;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use winwin\mapper\annotations\InheritConfiguration;
@@ -203,9 +205,15 @@ class MappingMethod implements LoggerAwareInterface
 
     private function generateMappingCode(MappingTargetField $field, ?MappingSourceField $sourceField, Mapping $mapping): void
     {
+        $sourceAllowsNull = true;
         if (null !== $sourceField) {
             $valueExpression = $this->generateTargetValueExpression($field, $sourceField, $mapping);
+            $sourceAllowsNull = $sourceField->getType()->allowsNull();
         } else {
+            $mappingType = $this->getMappingValueType($mapping);
+            if (null !== $mappingType) {
+                $sourceAllowsNull = $mappingType->allowsNull();
+            }
             $valueExpression = $this->generateValueExpression($field, $mapping);
         }
         if (null !== $mapping->condition) {
@@ -220,9 +228,13 @@ class MappingMethod implements LoggerAwareInterface
                 $var = $this->generateVariableName($field->getName());
                 $this->codes[] = '$'.$var.' = '.$valueExpression.';';
             }
-            $this->codes[] = 'if ($'.$var.' !== null ) {';
-            $this->codes[] = $field->generate('$'.$var);
-            $this->codes[] = '}';
+            if ($sourceAllowsNull) {
+                $this->codes[] = 'if ($'.$var.' !== null ) {';
+                $this->codes[] = $field->generate('$'.$var);
+                $this->codes[] = '}';
+            } else {
+                $this->codes[] = $field->generate('$'.$var);
+            }
         }
         if (null !== $mapping->condition) {
             $this->codes[] = '}';
@@ -240,15 +252,19 @@ class MappingMethod implements LoggerAwareInterface
             $type = $reflectionParameters[0]->getType();
             if (null !== $type && $type->allowsNull()) {
                 return '$this->'.$mapping->qualifiedByName.'('.$sourceField->getValue().')';
-            } else {
-                $var = $this->generateVariableName($field->getName());
+            }
+
+            $var = $this->generateVariableName($field->getName());
+            if ($sourceField->getType()->allowsNull()) {
                 $this->codes[] = sprintf('$%s = null;', $var);
                 $this->codes[] = sprintf('if (%s !== null) {', $sourceField->getValue());
                 $this->codes[] = sprintf('$%s = $this->%s(%s);', $var, $mapping->qualifiedByName, $sourceField->getValue());
                 $this->codes[] = '}';
-
-                return '$'.$var;
+            } else {
+                $this->codes[] = sprintf('$%s = $this->%s(%s);', $var, $mapping->qualifiedByName, $sourceField->getValue());
             }
+
+            return '$'.$var;
         }
         if ($this->typeEquals($field->getType(), $sourceField->getType())) {
             return $sourceField->getValue();
@@ -345,5 +361,21 @@ class MappingMethod implements LoggerAwareInterface
         } else {
             return $valueExpression.$condition;
         }
+    }
+
+    private function getMappingValueType(Mapping $mapping): ?ReflectionTypeInterface
+    {
+        if (null !== $mapping->constant || null !== $mapping->defaultValue) {
+            return new MixedType();
+        }
+        if (null !== $mapping->qualifiedByName) {
+            $method = $this->mapper->getMapperClass()->getMethod($mapping->qualifiedByName);
+            $type = $method->getReturnType();
+            if (null !== $type) {
+                return ReflectionType::fromPhpType($type);
+            }
+        }
+
+        return null;
     }
 }
