@@ -19,11 +19,11 @@ use winwin\mapper\converter\PrimitiveConverter;
 use winwin\mapper\converter\StringDateTimeConverter;
 use winwin\mapper\converter\StringEnumConverter;
 
-class GenerateCommand extends Command
+class GenerateMapperCommand extends Command
 {
     protected function configure(): void
     {
-        $this->setName('generate');
+        $this->setName('generate:mapper');
         $this->addArgument('path', InputArgument::REQUIRED, '');
     }
 

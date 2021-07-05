@@ -27,7 +27,7 @@ class MapperGeneratorTest extends TestCase
     /**
      * @dataProvider provideFiles
      */
-    public function testOrderItemMapper(string $file)
+    public function testMapper(string $file)
     {
         $mapperGenerator = new MapperGenerator(AnnotationReader::getInstance(), $this->createValueConverter());
         $mapperGenerator->setLogger(new ConsoleLogger(new ConsoleOutput()));

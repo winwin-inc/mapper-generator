@@ -35,7 +35,11 @@ class ValueConverter
     {
         foreach ($this->converters as $converter) {
             if ($converter->support($context->getOriginType(), $context->getCastType())) {
-                return sprintf('%s === null ? null : (%s)', $context->getValue(), $converter->convert($context));
+                if ($context->getSourceField()->getType()->allowsNull()) {
+                    return sprintf('%s === null ? null : (%s)', $context->getValue(), $converter->convert($context));
+                } else {
+                    return $converter->convert($context);
+                }
             }
         }
         throw new \InvalidArgumentException(sprintf('cannot convert from %s to %s', $context->getOriginType(), $context->getCastType()));

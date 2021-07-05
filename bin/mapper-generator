@@ -2,7 +2,7 @@
 <?php
 
 use Symfony\Component\Console\Application;
-use winwin\mapper\GenerateCommand;
+use winwin\mapper\GenerateMapperCommand;
 
 foreach ([__DIR__.'/../../../autoload.php', __DIR__.'/../vendor/autoload.php'] as $file) {
     if (file_exists($file)) {
@@ -24,6 +24,6 @@ unset($autoload);
 
 $app = new Application('Mapper Generator', '@git-version@');
 
-$app->add(new GenerateCommand());
-$app->setDefaultCommand('generate', true);
+$app->add(new GenerateMapperCommand());
+$app->setDefaultCommand('generate:mapper', true);
 $app->run();

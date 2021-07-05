@@ -229,7 +229,7 @@ class MappingMethod implements LoggerAwareInterface
                 $this->codes[] = '$'.$var.' = '.$valueExpression.';';
             }
             if ($sourceAllowsNull) {
-                $this->codes[] = 'if ($'.$var.' !== null ) {';
+                $this->codes[] = 'if (null !== $'.$var.') {';
                 $this->codes[] = $field->generate('$'.$var);
                 $this->codes[] = '}';
             } else {
@@ -245,7 +245,9 @@ class MappingMethod implements LoggerAwareInterface
     {
         if (null !== $mapping->qualifiedByName) {
             $method = $this->mapper->getMapperClass()->getMethod($mapping->qualifiedByName);
-            $reflectionParameters = $method->getParameters();
+            $reflectionParameters = array_values(array_filter($method->getParameters(), function (\ReflectionParameter $param) {
+                return !$param->isOptional();
+            }));
             if (1 !== count($reflectionParameters)) {
                 throw new \InvalidArgumentException($this->mapper->getMapperClass()->getName().'::'.$mapping->qualifiedByName.' should contain only one parameter');
             }
@@ -257,7 +259,7 @@ class MappingMethod implements LoggerAwareInterface
             $var = $this->generateVariableName($field->getName());
             if ($sourceField->getType()->allowsNull()) {
                 $this->codes[] = sprintf('$%s = null;', $var);
-                $this->codes[] = sprintf('if (%s !== null) {', $sourceField->getValue());
+                $this->codes[] = sprintf('if (null !== %s) {', $sourceField->getValue());
                 $this->codes[] = sprintf('$%s = $this->%s(%s);', $var, $mapping->qualifiedByName, $sourceField->getValue());
                 $this->codes[] = '}';
             } else {
@@ -289,7 +291,9 @@ class MappingMethod implements LoggerAwareInterface
         }
         if (null !== $mapping->qualifiedByName) {
             $method = $this->mapper->getMapperClass()->getMethod($mapping->qualifiedByName);
-            $reflectionParameters = $method->getParameters();
+            $reflectionParameters = array_values(array_filter($method->getParameters(), static function (\ReflectionParameter $parameter) {
+                return !$parameter->isDefaultValueAvailable();
+            }));
             if (1 === count($reflectionParameters)
                 && null !== $reflectionParameters[0]->getType()
                 && $reflectionParameters[0]->getType()->getName() === $this->source->getSourceClass()->getName()) {
