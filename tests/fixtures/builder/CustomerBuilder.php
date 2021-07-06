@@ -10,11 +10,18 @@ class CustomerBuilder
      * @var int|null
      */
     private $id;
-
     /**
      * @var string|null
      */
     private $name;
+
+    public function __construct(?Customer $value = null)
+    {
+        if (null !== $value) {
+            $this->id = $value->getId();
+            $this->name = $value->getName();
+        }
+    }
 
     /**
      * @return int|null
@@ -25,14 +32,39 @@ class CustomerBuilder
     }
 
     /**
-     * @param int|null $id
+     * @param int $id
      *
-     * @return CustomerBuilder
+     * @return self
      */
-    public function setId(?int $id): CustomerBuilder
+    public function setId(int $id): self
     {
         $this->id = $id;
 
         return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @param string|null $name
+     *
+     * @return self
+     */
+    public function setName(?string $name): self
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    public function build(): Customer
+    {
+        return new Customer($this->id, $this->name);
     }
 }

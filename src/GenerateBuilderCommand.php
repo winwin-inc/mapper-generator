@@ -41,7 +41,7 @@ class GenerateBuilderCommand extends Command
         }
         $path = $input->getArgument('path');
         if (is_file($path)) {
-            $this->generate($generator, $path);
+            $this->generate($output, $generator, $path);
         } else {
             $finder = new Finder();
             $finder
@@ -50,18 +50,18 @@ class GenerateBuilderCommand extends Command
                 ->notPath('vendor')
                 ->in($path);
             foreach ($finder as $file) {
-                $output->writeln("<info>process {$file->getPathname()}</info>");
-                $this->generate($generator, $file->getPathname());
+                $this->generate($output, $generator, $file->getPathname());
             }
         }
 
         return 0;
     }
 
-    private function generate(BuilderGenerator $generator, string $path): void
+    private function generate(OutputInterface $output, BuilderGenerator $generator, string $path): void
     {
         $result = $generator->generate($path);
         if (null !== $result) {
+            $output->writeln("<info>process {$path}</info>");
             $result->replace();
         }
     }

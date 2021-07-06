@@ -1,6 +1,12 @@
 <?php echo '<?php'; ?>
 
 namespace <?php echo $namespace; ?>;
+<?php if (!empty($imports)) { ?>
+
+<?php foreach ($imports as $import) { ?>
+use <?php echo $import; ?>;
+<?php } ?>
+<?php } ?>
 
 class <?php echo $className; ?>
 
@@ -15,10 +21,11 @@ class <?php echo $className; ?>
 <?php } ?>
     /**
 <?php foreach ($properties as $property) { ?>
-     * @param <?php echo $property['paramType']; ?>  $<?php echo $property['varName']; ?>;
+     * @param <?php echo $property['paramType']; ?>  $<?php echo $property['varName']; ?>
+
 <?php } ?>
      */
-    public function __construct(<?php foreach ($properties as $i => $property) { ?><?php echo $property['varType']; ?> $<?php echo $property['varName']; ?><?php if ($i < count($properties) - 1) { ?>, <?php } else { ?><?php } ?><?php } ?>)
+    public function __construct(<?php foreach ($properties as $i => $property) { ?><?php echo $property['varType']; ?> $<?php echo $property['varName']; ?><?php echo ($i < count($properties) - 1) ? ', ' : ''; ?><?php } ?>)
     {
 <?php foreach ($properties as $property) { ?>
          $this-><?php echo $property['varName']; ?> = $<?php echo $property['varName']; ?>;
@@ -37,9 +44,9 @@ class <?php echo $className; ?>
     }
 <?php } ?>
 
-    public static function builder(): <?php echo $builder['shortName']; ?>
+    public static function builder(<?php echo $className; ?> $other = null): <?php echo $builder['shortName']; ?>
 
     {
-        return new <?php echo $builder['shortName']; ?>();
+        return new <?php echo $builder['shortName']; ?>($other);
     }
 }

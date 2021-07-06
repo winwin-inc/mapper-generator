@@ -14,6 +14,7 @@ use Roave\BetterReflection\BetterReflection;
 use Roave\BetterReflection\Reflection\ReflectionClass;
 use Roave\BetterReflection\Reflection\ReflectionProperty;
 use Roave\BetterReflection\Reflector\ClassReflector;
+use Roave\BetterReflection\SourceLocator\Ast\Exception\ParseToAstFailure;
 use Roave\BetterReflection\SourceLocator\Type\StringSourceLocator;
 use winwin\mapper\annotations\BuilderIgnore;
 
@@ -100,20 +101,34 @@ class BuilderTarget
      */
     public function generateCode(): string
     {
+        $imports = [];
+        $properties = [];
+        foreach ($this->properties as $property) {
+            $typeString = implode('|', $property->getDocBlockTypeStrings());
+            $type = ReflectionType::parse($typeString);
+            if ($type->isClass()) {
+                $parts = explode('\\', $type->getName());
+                $shortName = end($parts);
+                if (!class_exists($this->targetClass->getNamespaceName().'\\'.$shortName)) {
+                    $imports[$type->getName()] = true;
+                    $typeString = $shortName.($type->allowsNull() ? '|null' : '');
+                    $type = ReflectionType::parse($typeString);
+                }
+            }
+
+            $properties[] = [
+                'varName' => $property->getName(),
+                'varType' => $this->getPhpType($type),
+                'paramType' => $typeString,
+                'methodName' => ucfirst($property->getName()),
+            ];
+        }
+
         return $this->view->render('builder-target', [
             'namespace' => $this->targetClass->getNamespaceName(),
             'className' => $this->targetClass->getShortName(),
-            'properties' => array_map(function (ReflectionProperty $property) {
-                $typeString = implode('|', $property->getDocBlockTypeStrings());
-                $type = ReflectionType::parse($typeString);
-
-                return [
-                    'varName' => $property->getName(),
-                    'varType' => $this->getPhpType($type),
-                    'paramType' => $typeString,
-                    'methodName' => ucfirst($property->getName()),
-                ];
-            }, $this->properties),
+            'imports' => array_keys($imports),
+            'properties' => $properties,
             'builder' => [
                 'shortName' => $this->getBuilderClassShortName(),
             ],
@@ -125,27 +140,44 @@ class BuilderTarget
      */
     public function generateBuilderCode(): string
     {
+        $imports = [];
+        $properties = [];
+        foreach ($this->properties as $property) {
+            $targetTypeString = implode('|', $property->getDocBlockTypeStrings());
+            $targetType = ReflectionType::parse($targetTypeString);
+
+            if ($targetType->isClass()) {
+                $parts = explode('\\', $targetType->getName());
+                $shortName = end($parts);
+                if (!class_exists($this->targetClass->getNamespaceName().'\\'.$shortName)) {
+                    $imports[$targetType->getName()] = true;
+                    $targetTypeString = $shortName.($targetType->allowsNull() ? '|null' : '');
+                    $targetType = ReflectionType::parse($targetTypeString);
+                }
+            }
+            $typeString = $targetTypeString;
+            $type = $targetType;
+
+            if (!$type->allowsNull()) {
+                $typeString .= '|null';
+                $type = ReflectionType::parse($typeString);
+            }
+
+            $properties[] = [
+                'varName' => $property->getName(),
+                'varType' => $this->getPhpType($type),
+                'paramType' => $typeString,
+                'targetVarType' => $this->getPhpType($targetType),
+                'targetParamType' => $targetTypeString,
+                'methodName' => ucfirst($property->getName()),
+            ];
+        }
+
         return $this->view->render('builder', [
             'namespace' => $this->getBuilderClassNamespaceName(),
             'className' => $this->getBuilderClassShortName(),
-            'properties' => array_map(function (ReflectionProperty $property) {
-                $typeString = $targetTypeString = implode('|', $property->getDocBlockTypeStrings());
-                $type = $targetType = ReflectionType::parse($targetTypeString);
-
-                if (!$targetType->allowsNull()) {
-                    $typeString .= '|null';
-                    $type = ReflectionType::parse($typeString);
-                }
-
-                return [
-                    'varName' => $property->getName(),
-                    'varType' => $this->getPhpType($type),
-                    'targetVarType' => $this->getPhpType($targetType),
-                    'paramType' => $typeString,
-                    'targetParamType' => $targetTypeString,
-                    'methodName' => ucfirst($property->getName()),
-                ];
-            }, $this->properties),
+            'imports' => array_keys($imports),
+            'properties' => $properties,
             'targetClass' => $this->getClassShortName(),
         ]);
     }
@@ -156,15 +188,17 @@ class BuilderTarget
         $astLocator = (new BetterReflection())->astLocator();
         $code = $this->generateCode();
         $reflector = new ClassReflector(new StringSourceLocator($code, $astLocator));
-        $generatedClass = $reflector->reflect($class->getName());
-        $class->removeMethod('__construct');
-
-        foreach ($generatedClass->getMethods() as $method) {
-            if (!$class->hasMethod($method->getName())) {
-                $class->getAst()->stmts[] = $method->getAst();
-            }
+        try {
+            $generatedClass = $reflector->reflect($class->getName());
+        } catch (ParseToAstFailure $e) {
+            throw new \InvalidArgumentException("code syntax error: \n".$code, 0, $e);
         }
         $propertyIndex = array_flip(Arrays::pull($this->properties, 'name'));
+
+        foreach ($generatedClass->getMethods() as $method) {
+            $class->removeMethod($method->getName());
+            $class->getAst()->stmts[] = $method->getAst();
+        }
         usort($class->getAst()->stmts, function ($a, $b) use ($propertyIndex) {
             return $this->getStmtSort($a, $propertyIndex) <=> $this->getStmtSort($b, $propertyIndex);
         });
@@ -187,13 +221,15 @@ class BuilderTarget
         $astLocator = (new BetterReflection())->astLocator();
         $code = $this->generateBuilderCode();
         $reflector = new ClassReflector(new StringSourceLocator($code, $astLocator));
-        $generatedClass = $reflector->reflect($class->getName());
-        $class->removeMethod('build');
+        try {
+            $generatedClass = $reflector->reflect($class->getName());
+        } catch (ParseToAstFailure $e) {
+            throw new \RuntimeException('builder code syntax error: '.$code, 0, $e);
+        }
 
         foreach ($generatedClass->getMethods() as $method) {
-            if (!$class->hasMethod($method->getName())) {
-                $class->getAst()->stmts[] = $method->getAst();
-            }
+            $class->removeMethod($method->getName());
+            $class->getAst()->stmts[] = $method->getAst();
         }
         $propertyIndex = array_flip(Arrays::pull($this->properties, 'name'));
         usort($class->getAst()->stmts, function ($a, $b) use ($propertyIndex) {

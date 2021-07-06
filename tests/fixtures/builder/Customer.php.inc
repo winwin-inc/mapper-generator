@@ -1,14 +1,6 @@
 <?php
-
-declare(strict_types=1);
-
 namespace winwin\mapper\fixtures\builder;
 
-use winwin\mapper\annotations\Builder;
-
-/**
- * @Builder()
- */
 class Customer
 {
     /**
@@ -17,34 +9,38 @@ class Customer
     private $id;
 
     /**
-     * @var string
+     * @var string|null
      */
     private $name;
 
     /**
-     * Customer constructor.
-     * @param int $id
-     * @param string $name
+     * @param int  $id
+     * @param string|null  $name
      */
-    public function __construct(int $id, string $name)
+    public function __construct(int $id, ?string $name)
     {
-        $this->id = $id;
-        $this->name = $name;
+         $this->id = $id;
+         $this->name = $name;
     }
 
     /**
      * @return int
      */
-    public function getId(): int
+    public function getId() :int
     {
         return $this->id;
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getName(): string
+    public function getName() :?string
     {
         return $this->name;
+    }
+
+    public static function builder(Customer $other = null): CustomerBuilder
+    {
+        return new CustomerBuilder($other);
     }
 }

@@ -3,7 +3,6 @@
 
 use Symfony\Component\Console\Application;
 use winwin\mapper\GenerateBuilderCommand;
-use winwin\mapper\GenerateCommand;
 
 foreach ([__DIR__.'/../../../autoload.php', __DIR__.'/../vendor/autoload.php'] as $file) {
     if (file_exists($file)) {

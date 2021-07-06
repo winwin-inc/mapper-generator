@@ -75,13 +75,13 @@ class BuilderGenerator implements LoggerAwareInterface
         }
         $result = new BuilderResult($file);
         $result->setBuilderFile(preg_replace('/\.php$/', 'Builder.php', $file));
-        $this->generateBuildTarget($builderTarget, $result);
+        $this->generateTarget($builderTarget, $result);
         $this->generateBuilder($builderTarget, $result);
 
         return $result;
     }
 
-    private function generateBuildTarget(BuilderTarget $builderTarget, BuilderResult $result): void
+    private function generateTarget(BuilderTarget $builderTarget, BuilderResult $result): void
     {
         $stmts = $this->parser->parse(file_get_contents($result->getTargetFile()));
         $visitor = new class() extends NodeVisitorAbstract {

@@ -1,7 +1,12 @@
-<?php declare(strict_types=1);
-echo '<?php'; ?>
+<?php echo '<?php'; ?>
 
 namespace <?php echo $namespace; ?>;
+<?php if (!empty($imports)) { ?>
+
+<?php foreach ($imports as $import) { ?>
+use <?php echo $import; ?>;
+<?php } ?>
+<?php } ?>
 
 class <?php echo $className; ?>
 
@@ -13,6 +18,15 @@ class <?php echo $className; ?>
      */
     private $<?php echo $property['varName']; ?>;
 <?php } ?>
+
+    public function __construct(?<?php echo $targetClass; ?> $value = null)
+    {
+        if ($value !== null) {
+<?php foreach ($properties as $property) { ?>
+            $this-><?php echo $property['varName']; ?> = $value->get<?php echo $property['methodName']; ?>();
+<?php } ?>
+        }
+    }
 <?php foreach ($properties as $property) { ?>
 
     /**
@@ -40,6 +54,6 @@ class <?php echo $className; ?>
     public function build(): <?php echo $targetClass; ?>
 
     {
-        return new <?php echo $targetClass; ?>(<?php foreach ($properties as $i => $property) { ?>$this-><?php echo $property['varName']; ?><?php if ($i < count($properties) - 1) { ?>, <?php } else { ?><?php } ?><?php } ?>);
+        return new <?php echo $targetClass; ?>(<?php foreach ($properties as $i => $property) { ?>$this-><?php echo $property['varName']; ?><?php echo ($i < count($properties) - 1) ? ', ' : ''; ?><?php } ?>);
     }
 }
