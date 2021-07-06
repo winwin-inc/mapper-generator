@@ -66,7 +66,7 @@ class BuilderGenerator implements LoggerAwareInterface
         foreach ($reflector->getAllClasses() as $class) {
             $builder = $this->annotationReader->getClassAnnotation(new \ReflectionClass($class->getName()), Builder::class);
             if (null !== $builder) {
-                $builderTarget = BuilderTarget::create($class);
+                $builderTarget = BuilderTarget::create($this->annotationReader, $class);
                 break;
             }
         }
@@ -90,20 +90,9 @@ class BuilderGenerator implements LoggerAwareInterface
 
             public function enterNode(Node $node)
             {
-                if ($node instanceof Node\Stmt\Namespace_) {
-                    foreach ($node->stmts as $stmt) {
-                        if ($stmt instanceof Node\Stmt\Use_
-                            && Node\Stmt\Use_::TYPE_NORMAL === $stmt->type) {
-                            foreach ($stmt->uses as $use) {
-                                $alias = null === $use->alias ? $use->name->getLast() : $use->alias->toString();
-                                $this->target->addImport($alias, $use->name->toCodeString());
-                            }
-                        }
-                    }
-                }
                 if ($node instanceof Node\Stmt\Class_
                     && $node->name->toString() === $this->target->getClassShortName()) {
-                    return $this->target->replaceWithImport($this->target->getClassAst());
+                    return $this->target->getClassAst();
                 }
 
                 return null;
@@ -112,6 +101,7 @@ class BuilderGenerator implements LoggerAwareInterface
         $visitor->target = $builderTarget;
         $traverser = new NodeTraverser();
         $traverser->addVisitor($visitor);
+        $traverser->addVisitor(new NamespaceNormalizer());
 
         $result->setTargetCode($this->printer->prettyPrintFile($traverser->traverse($stmts)));
     }
@@ -136,7 +126,7 @@ class BuilderGenerator implements LoggerAwareInterface
             {
                 if ($node instanceof Node\Stmt\Class_
                     && $node->name->toString() === $this->target->getBuilderClassShortName()) {
-                    return $this->target->replaceWithImport($this->target->getBuilderClassAst());
+                    return $this->target->getBuilderClassAst();
                 }
 
                 return null;
@@ -146,6 +136,7 @@ class BuilderGenerator implements LoggerAwareInterface
 
         $traverser = new NodeTraverser();
         $traverser->addVisitor($visitor);
+        $traverser->addVisitor(new NamespaceNormalizer());
         $result->setBuilderCode($this->printer->prettyPrintFile($traverser->traverse($stmts)));
     }
 }

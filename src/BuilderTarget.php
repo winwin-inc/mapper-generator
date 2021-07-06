@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace winwin\mapper;
 
+use Doctrine\Common\Annotations\Reader;
 use kuiper\helper\Arrays;
 use kuiper\reflection\ReflectionType;
 use kuiper\reflection\ReflectionTypeInterface;
 use kuiper\web\view\PhpView;
 use PhpParser\Node;
-use PhpParser\NodeTraverser;
-use PhpParser\NodeVisitorAbstract;
 use Roave\BetterReflection\BetterReflection;
 use Roave\BetterReflection\Reflection\ReflectionClass;
 use Roave\BetterReflection\Reflection\ReflectionProperty;
 use Roave\BetterReflection\Reflector\ClassReflector;
 use Roave\BetterReflection\SourceLocator\Type\StringSourceLocator;
+use winwin\mapper\annotations\BuilderIgnore;
 
 class BuilderTarget
 {
@@ -38,68 +38,28 @@ class BuilderTarget
     private $properties;
 
     /**
-     * @var string[]
-     */
-    private $importNames;
-
-    /**
      * @var PhpView
      */
     private $view;
 
-    public static function create(ReflectionClass $class): self
+    public static function create(Reader $annotationReader, ReflectionClass $class): self
     {
+        $reflClass = new \ReflectionClass($class->getName());
         $builderTarget = new self();
         $builderTarget->view = new PhpView(__DIR__.'/templates');
         $builderTarget->targetClass = $class;
-        $builderTarget->properties = array_values(array_filter($class->getProperties(), static function (ReflectionProperty $prop) {
-            return !$prop->isStatic();
+        $builderTarget->properties = array_values(array_filter($class->getProperties(), static function (ReflectionProperty $prop) use ($reflClass, $annotationReader) {
+            if ($prop->isStatic()) {
+                return false;
+            }
+            if (null !== $annotationReader->getPropertyAnnotation($reflClass->getProperty($prop->getName()), BuilderIgnore::class)) {
+                return false;
+            }
+
+            return true;
         }));
 
         return $builderTarget;
-    }
-
-    public function addImport(string $alias, string $className): void
-    {
-        $this->importNames[$alias] = $className;
-    }
-
-    public function toRelativeName(Node\Name\FullyQualified $node): Node\Name
-    {
-        $key = array_search(ltrim($node->toCodeString(), '\\'), $this->importNames, true);
-        if (false !== $key) {
-            return new Node\Name($key, $node->getAttributes());
-        }
-        $namespace = $node->slice(0, -1);
-        if (null !== $namespace && ltrim($namespace->toCodeString(), '\\') === $this->targetClass->getNamespaceName()) {
-            return new Node\Name($node->getLast(), $node->getAttributes());
-        }
-
-        return $node;
-    }
-
-    public function replaceWithImport(Node $node): Node
-    {
-        $nodeTraverser = new NodeTraverser();
-        $visitor = new class() extends NodeVisitorAbstract {
-            /**
-             * @var BuilderTarget
-             */
-            public $target;
-
-            public function enterNode(Node $node)
-            {
-                if ($node instanceof Node\Name\FullyQualified) {
-                    return $this->target->toRelativeName($node);
-                }
-
-                return null;
-            }
-        };
-        $visitor->target = $this;
-        $nodeTraverser->addVisitor($visitor);
-
-        return $nodeTraverser->traverse([$node])[0];
     }
 
     /**
