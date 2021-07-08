@@ -34,7 +34,7 @@ class GenerateBuilderCommand extends Command
         $loader->unregister();
         $loader->register(false);
 
-        $generator = new BuilderGenerator(AnnotationReader::getInstance());
+        $generator = new BuilderGenerator(AnnotationReader::getInstance(), $loader);
         $generator->setLogger(new ConsoleLogger($output));
         if (file_exists($projectPath.'/.generator-config')) {
             require $projectPath.'/.-config';

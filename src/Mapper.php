@@ -8,6 +8,7 @@ use Doctrine\Common\Annotations\Reader;
 use kuiper\helper\Arrays;
 use kuiper\serializer\DocReader;
 use kuiper\serializer\DocReaderInterface;
+use PhpParser\Error as ParserError;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Roave\BetterReflection\Reflection\ReflectionClass;
@@ -111,9 +112,8 @@ class Mapper implements LoggerAwareInterface
         $reflectionMethod = $this->betterReflectionClass->getMethod($method);
         try {
             $reflectionMethod->setBodyFromString($body = $this->getMappingMethod($method)->generate());
-        } catch (\PhpParser\Error $e) {
-            error_log("Generated code has error\n".$body);
-            throw $e;
+        } catch (ParserError $e) {
+            throw new \RuntimeException("Generated code has syntax error\n".$body, 0, $e);
         }
 
         return $reflectionMethod->getBodyAst();
@@ -187,6 +187,30 @@ class Mapper implements LoggerAwareInterface
             }
 
             return new MappingSource($this->docReader, $parameterType->getName(), $parameters[0]->getName());
+        }
+        if (2 === count($parameters) && $method->hasReturnType()) {
+            $returnType = $method->getReturnType();
+            if (null === $returnType || $returnType->isBuiltin()) {
+                return null;
+            }
+            $sourceParameter = null;
+            $targetParameter = null;
+            foreach ($method->getParameters() as $i => $parameter) {
+                $parameterType = $parameter->getType();
+                if (null === $parameterType || $parameterType->isBuiltin()) {
+                    return null;
+                }
+                if ($parameterType->getName() === $returnType->getName()) {
+                    $targetParameter = $parameter;
+                } else {
+                    $sourceParameter = $parameter;
+                }
+            }
+            if (isset($sourceParameter, $targetParameter)) {
+                return new MappingSource($this->docReader, $sourceParameter->getType()->getName(), $sourceParameter->getName());
+            }
+
+            return null;
         }
         /** @var MappingSourceAnnotation|null $source */
         $source = $this->annotationReader->getMethodAnnotation($method, MappingSourceAnnotation::class);

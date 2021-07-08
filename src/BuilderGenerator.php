@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace winwin\mapper;
 
+use Composer\Autoload\ClassLoader;
 use Doctrine\Common\Annotations\Reader;
+use kuiper\reflection\ReflectionFileFactory;
 use PhpParser\Node;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
@@ -14,6 +16,7 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Roave\BetterReflection\BetterReflection;
 use Roave\BetterReflection\Reflector\ClassReflector;
+use Roave\BetterReflection\SourceLocator\Type\ComposerSourceLocator;
 use Roave\BetterReflection\SourceLocator\Type\SingleFileSourceLocator;
 use winwin\mapper\annotations\Builder;
 
@@ -25,6 +28,11 @@ class BuilderGenerator implements LoggerAwareInterface
      * @var Reader
      */
     private $annotationReader;
+
+    /**
+     * @var ClassLoader|null
+     */
+    private $classLoader;
 
     /**
      * @var \PhpParser\Parser
@@ -44,9 +52,10 @@ class BuilderGenerator implements LoggerAwareInterface
     /**
      * MapperGenerator constructor.
      */
-    public function __construct(Reader $annotationReader, int $minPropertyNum = 3)
+    public function __construct(Reader $annotationReader, ClassLoader $classLoader = null, int $minPropertyNum = 3)
     {
         $this->annotationReader = $annotationReader;
+        $this->classLoader = $classLoader;
         $this->minPropertyNum = $minPropertyNum;
         $parserFactory = new ParserFactory();
         $this->parser = $parserFactory->create(ParserFactory::ONLY_PHP7);
@@ -60,13 +69,12 @@ class BuilderGenerator implements LoggerAwareInterface
             return null;
         }
 
-        $astLocator = (new BetterReflection())->astLocator();
-        $reflector = new ClassReflector(new SingleFileSourceLocator($file, $astLocator));
         $builderTarget = null;
-        foreach ($reflector->getAllClasses() as $class) {
-            $builder = $this->annotationReader->getClassAnnotation(new \ReflectionClass($class->getName()), Builder::class);
+        foreach (ReflectionFileFactory::getInstance()->create($file)->getClasses() as $class) {
+            $builder = $this->annotationReader->getClassAnnotation(new \ReflectionClass($class), Builder::class);
             if (null !== $builder) {
-                $builderTarget = BuilderTarget::create($this->annotationReader, $class);
+                $reflector = $this->createReflector($file);
+                $builderTarget = BuilderTarget::create($this->annotationReader, $reflector->reflect($class));
                 break;
             }
         }
@@ -113,8 +121,7 @@ class BuilderGenerator implements LoggerAwareInterface
 
             return;
         }
-        $astLocator = (new BetterReflection())->astLocator();
-        $reflector = new ClassReflector(new SingleFileSourceLocator($result->getBuilderFile(), $astLocator));
+        $reflector = $this->createReflector($result->getBuilderFile());
         $builderTarget->setBuilderClass($reflector->reflect($builderTarget->getBuilderClassName()));
 
         $stmts = $this->parser->parse(file_get_contents($result->getBuilderFile()));
@@ -138,5 +145,17 @@ class BuilderGenerator implements LoggerAwareInterface
         $traverser->addVisitor($visitor);
         $traverser->addVisitor(new NamespaceNormalizer());
         $result->setBuilderCode($this->printer->prettyPrintFile($traverser->traverse($stmts)));
+    }
+
+    private function createReflector(string $file): ClassReflector
+    {
+        $astLocator = (new BetterReflection())->astLocator();
+        if (null !== $this->classLoader) {
+            $reflector = new ClassReflector(new ComposerSourceLocator($this->classLoader, $astLocator));
+        } else {
+            $reflector = new ClassReflector(new SingleFileSourceLocator($file, $astLocator));
+        }
+
+        return $reflector;
     }
 }

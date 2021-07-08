@@ -35,7 +35,7 @@ class BuilderTargetTest extends TestCase
     public function testMinNumChanged()
     {
         $file = __DIR__.'/fixtures/builder/Customer.php';
-        $generator = new BuilderGenerator(AnnotationReader::getInstance(), 1);
+        $generator = new BuilderGenerator(AnnotationReader::getInstance(), null, 1);
         $result = $generator->generate($file);
         $this->assertNotNull($result);
     }
