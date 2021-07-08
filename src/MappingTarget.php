@@ -24,15 +24,21 @@ class MappingTarget
     private $parameterName;
 
     /**
+     * @var bool
+     */
+    private $builder;
+
+    /**
      * @var string|null
      */
     private $variableName;
 
-    public function __construct(DocReaderInterface $docReader, string $targetClass, ?string $parameterName)
+    public function __construct(DocReaderInterface $docReader, string $targetClass, ?string $parameterName, bool $builder = false)
     {
         $this->docReader = $docReader;
         $this->targetClass = new \ReflectionClass($targetClass);
         $this->parameterName = $parameterName;
+        $this->builder = $builder;
     }
 
     /**
@@ -62,6 +68,14 @@ class MappingTarget
     public function isParameter(): bool
     {
         return isset($this->parameterName);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isBuilder(): bool
+    {
+        return $this->builder;
     }
 
     /**

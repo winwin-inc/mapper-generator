@@ -13,6 +13,7 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Roave\BetterReflection\Reflection\ReflectionClass;
 use winwin\mapper\annotations\AfterMapping;
+use winwin\mapper\annotations\Builder;
 use winwin\mapper\annotations\MappingSource as MappingSourceAnnotation;
 use winwin\mapper\annotations\MappingTarget as MappingTargetAnnotation;
 
@@ -160,8 +161,14 @@ class Mapper implements LoggerAwareInterface
             // 返回值为空
             [$source, $target] = $this->getMappingSourceAndTarget($method);
         } elseif (!$returnType->isBuiltin()) {
+            $returnClass = $returnType->getName();
+            $isBuilder = null !== $this->annotationReader->getClassAnnotation(new \ReflectionClass($returnClass), Builder::class);
+            if ($isBuilder && class_exists($returnClass.'Builder')) {
+                $target = new MappingTarget($this->docReader, $returnClass.'Builder', null, $isBuilder);
+            } else {
+                $target = new MappingTarget($this->docReader, $returnClass, null);
+            }
             // 返回值为 MappingTarget
-            $target = new MappingTarget($this->docReader, $returnType->getName(), null);
             $source = $this->getMappingSource($method);
         }
         if (isset($source, $target)) {

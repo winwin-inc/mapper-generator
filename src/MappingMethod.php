@@ -320,7 +320,7 @@ class MappingMethod implements LoggerAwareInterface
     {
         $returnType = $this->method->getReturnType();
         if (null !== $returnType && 'void' !== $returnType->getName()) {
-            $this->codes[] = 'return $'.$this->target->getParameterName().';';
+            $this->codes[] = 'return $'.$this->target->getParameterName().($this->target->isBuilder() ? '->build()' : '').';';
         }
     }
 
