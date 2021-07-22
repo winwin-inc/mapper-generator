@@ -19,6 +19,6 @@ class IntEnumConverter implements Converter
 
     public function convert(CastContext $context): string
     {
-        return sprintf('%s::fromOrdinal(%s)', $context->getCastType()->getName(), $context->getValue());
+        return sprintf('\\%s::fromOrdinal(%s)', $context->getCastType()->getName(), $context->getValue());
     }
 }

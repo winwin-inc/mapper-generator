@@ -23,6 +23,7 @@
     },
     "require": {
         "php": "^7.2",
+        "ext-json": "*",
         "doctrine/annotations": "^1.8",
         "kuiper/kuiper": "^0.5",
         "nikic/php-parser": "^4.9",

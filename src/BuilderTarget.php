@@ -12,6 +12,7 @@ use kuiper\web\view\PhpView;
 use PhpParser\Node;
 use Roave\BetterReflection\BetterReflection;
 use Roave\BetterReflection\Reflection\ReflectionClass;
+use Roave\BetterReflection\Reflection\ReflectionParameter;
 use Roave\BetterReflection\Reflection\ReflectionProperty;
 use Roave\BetterReflection\Reflector\ClassReflector;
 use Roave\BetterReflection\SourceLocator\Ast\Exception\ParseToAstFailure;
@@ -103,6 +104,7 @@ class BuilderTarget
     {
         $imports = [];
         $properties = [];
+        $defaultValues = $this->getConstructorParameters();
         foreach ($this->properties as $property) {
             $typeString = implode('|', $property->getDocBlockTypeStrings());
             $type = ReflectionType::parse($typeString);
@@ -115,12 +117,15 @@ class BuilderTarget
                     $type = ReflectionType::parse($typeString);
                 }
             }
+            $default = $defaultValues[$property->getName()] ?? [];
 
             $properties[] = [
                 'varName' => $property->getName(),
                 'varType' => $this->getPhpType($type),
                 'paramType' => $typeString,
                 'methodName' => ucfirst($property->getName()),
+                'hasDefaultValue' => $default['hasDefaultValue'] ?? false,
+                'defaultValue' => $default['defaultValue'] ?? null,
             ];
         }
 
@@ -135,6 +140,38 @@ class BuilderTarget
         ]);
     }
 
+    public function getConstructorParameters(): array
+    {
+        $params = [];
+        $constructor = null;
+        try {
+            $constructor = $this->targetClass->getConstructor();
+        } catch (\Exception $e) {
+        }
+        if (null !== $constructor) {
+            foreach ($constructor->getParameters() as $parameter) {
+                /** @var ReflectionParameter $parameter */
+                if ($parameter->isDefaultValueAvailable()) {
+                    $params[$parameter->getName()]['hasDefaultValue'] = true;
+                    // if ($parameter->isDefaultValueConstant()) {
+                    //$params[$parameter->getName()]['defaultValue'] = '\\' . $parameter->getDefaultValueConstantName();
+                    //} else {
+                    $params[$parameter->getName()]['defaultValue'] = json_encode($parameter->getDefaultValue());
+                    // }
+                }
+            }
+        }
+        foreach ($this->properties as $property) {
+            $defaultValue = $property->getDefaultValue();
+            if (null !== $defaultValue) {
+                $params[$property->getName()]['hasDefaultValue'] = true;
+                $params[$property->getName()]['defaultValue'] = json_encode($defaultValue);
+            }
+        }
+
+        return $params;
+    }
+
     /**
      * @return string
      */
@@ -142,6 +179,8 @@ class BuilderTarget
     {
         $imports = [];
         $properties = [];
+        $defaultValues = $this->getConstructorParameters();
+
         foreach ($this->properties as $property) {
             $targetTypeString = implode('|', $property->getDocBlockTypeStrings());
             $targetType = ReflectionType::parse($targetTypeString);
@@ -163,6 +202,7 @@ class BuilderTarget
                 $type = ReflectionType::parse($typeString);
             }
 
+            $default = $defaultValues[$property->getName()] ?? [];
             $properties[] = [
                 'varName' => $property->getName(),
                 'varType' => $this->getPhpType($type),
@@ -170,6 +210,8 @@ class BuilderTarget
                 'targetVarType' => $this->getPhpType($targetType),
                 'targetParamType' => $targetTypeString,
                 'methodName' => ucfirst($property->getName()),
+                'hasDefaultValue' => $default['hasDefaultValue'] ?? false,
+                'defaultValue' => $default['defaultValue'] ?? null,
             ];
         }
 
@@ -225,6 +267,11 @@ class BuilderTarget
             $generatedClass = $reflector->reflect($class->getName());
         } catch (ParseToAstFailure $e) {
             throw new \RuntimeException('builder code syntax error: '.$code, 0, $e);
+        }
+        foreach ($generatedClass->getProperties() as $property) {
+            if (!$class->hasProperty($property->getName())) {
+                $class->getAst()->stmts[] = $property->getAst();
+            }
         }
 
         foreach ($generatedClass->getMethods() as $method) {

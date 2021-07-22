@@ -16,7 +16,7 @@ class <?php echo $className; ?>
      * @var <?php echo $property['paramType']; ?>
 
      */
-    private $<?php echo $property['varName']; ?>;
+    private $<?php echo $property['varName']; ?><?php if ($property['hasDefaultValue']) { ?> = <?php echo $property['defaultValue']; ?><?php }?>;
 <?php } ?>
 
     public function __construct(?<?php echo $targetClass; ?> $value = null)

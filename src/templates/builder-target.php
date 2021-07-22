@@ -1,4 +1,5 @@
-<?php echo '<?php'; ?>
+<?php declare(strict_types=1);
+echo '<?php'; ?>
 
 namespace <?php echo $namespace; ?>;
 <?php if (!empty($imports)) { ?>
@@ -25,7 +26,7 @@ class <?php echo $className; ?>
 
 <?php } ?>
      */
-    public function __construct(<?php foreach ($properties as $i => $property) { ?><?php echo $property['varType']; ?> $<?php echo $property['varName']; ?><?php echo ($i < count($properties) - 1) ? ', ' : ''; ?><?php } ?>)
+    public function __construct(<?php foreach ($properties as $i => $property) { ?><?php echo $property['varType']; ?> $<?php echo $property['varName']; ?><?php if ($property['hasDefaultValue']) { ?> = <?php echo $property['defaultValue']; ?><?php } ?><?php echo ($i < count($properties) - 1) ? ', ' : ''; ?><?php } ?>)
     {
 <?php foreach ($properties as $property) { ?>
          $this-><?php echo $property['varName']; ?> = $<?php echo $property['varName']; ?>;
