@@ -17,6 +17,7 @@ use Roave\BetterReflection\Reflection\ReflectionProperty;
 use Roave\BetterReflection\Reflector\ClassReflector;
 use Roave\BetterReflection\SourceLocator\Ast\Exception\ParseToAstFailure;
 use Roave\BetterReflection\SourceLocator\Type\StringSourceLocator;
+use winwin\mapper\annotations\Builder;
 use winwin\mapper\annotations\BuilderIgnore;
 
 class BuilderTarget
@@ -47,11 +48,16 @@ class BuilderTarget
     public static function create(Reader $annotationReader, ReflectionClass $class): self
     {
         $reflClass = new \ReflectionClass($class->getName());
+        /** @var Builder $builderAnnotation */
+        $builderAnnotation = $annotationReader->getClassAnnotation($reflClass, Builder::class);
         $builderTarget = new self();
         $builderTarget->view = new PhpView(__DIR__.'/templates');
         $builderTarget->targetClass = $class;
-        $builderTarget->properties = array_values(array_filter($class->getProperties(), static function (ReflectionProperty $prop) use ($reflClass, $annotationReader) {
+        $builderTarget->properties = array_values(array_filter($class->getProperties(), static function (ReflectionProperty $prop) use ($reflClass, $annotationReader, $builderAnnotation) {
             if ($prop->isStatic()) {
+                return false;
+            }
+            if (!empty($builderAnnotation->ignore) && in_array($prop->getName(), $builderAnnotation->ignore, true)) {
                 return false;
             }
             if (null !== $annotationReader->getPropertyAnnotation($reflClass->getProperty($prop->getName()), BuilderIgnore::class)) {
@@ -107,12 +113,16 @@ class BuilderTarget
         $defaultValues = $this->getConstructorParameters();
         foreach ($this->properties as $property) {
             $typeString = implode('|', $property->getDocBlockTypeStrings());
-            $type = ReflectionType::parse($typeString);
+            try {
+                $type = ReflectionType::parse($typeString);
+            } catch (\Exception $e) {
+                throw new \RuntimeException($property->getDeclaringClass()->getName().'.'.$property->getName()." type $typeString");
+            }
             if ($type->isClass()) {
                 $parts = explode('\\', $type->getName());
                 $shortName = end($parts);
                 if (!class_exists($this->targetClass->getNamespaceName().'\\'.$shortName)) {
-                    $imports[$type->getName()] = true;
+                    $imports[ltrim($type->getName(), '\\')] = true;
                     $typeString = $shortName.($type->allowsNull() ? '|null' : '');
                     $type = ReflectionType::parse($typeString);
                 }
@@ -189,7 +199,7 @@ class BuilderTarget
                 $parts = explode('\\', $targetType->getName());
                 $shortName = end($parts);
                 if (!class_exists($this->targetClass->getNamespaceName().'\\'.$shortName)) {
-                    $imports[$targetType->getName()] = true;
+                    $imports[ltrim($targetType->getName(), '\\')] = true;
                     $targetTypeString = $shortName.($targetType->allowsNull() ? '|null' : '');
                     $targetType = ReflectionType::parse($targetTypeString);
                 }

@@ -43,7 +43,7 @@ class NamespaceNormalizer extends NodeVisitorAbstract
 
     public function addImport(string $alias, string $className): void
     {
-        $this->importNames[$alias] = $className;
+        $this->importNames[$alias] = ltrim($className, '\\');
     }
 
     public function toRelativeName(Node\Name\FullyQualified $node): Node\Name

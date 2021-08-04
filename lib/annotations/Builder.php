@@ -12,4 +12,10 @@ use Doctrine\Common\Annotations\Annotation\Target;
  */
 class Builder
 {
+    /**
+     * 忽略属性列表.
+     *
+     * @var string[]
+     */
+    public $ignore;
 }
