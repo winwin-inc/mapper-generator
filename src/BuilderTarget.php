@@ -8,7 +8,6 @@ use Doctrine\Common\Annotations\Reader;
 use kuiper\helper\Arrays;
 use kuiper\reflection\ReflectionType;
 use kuiper\reflection\ReflectionTypeInterface;
-use kuiper\web\view\PhpView;
 use PhpParser\Node;
 use Roave\BetterReflection\BetterReflection;
 use Roave\BetterReflection\Reflection\ReflectionClass;
@@ -41,7 +40,7 @@ class BuilderTarget
     private $properties;
 
     /**
-     * @var PhpView
+     * @var TemplateEngine
      */
     private $view;
 
@@ -51,21 +50,22 @@ class BuilderTarget
         /** @var Builder $builderAnnotation */
         $builderAnnotation = $annotationReader->getClassAnnotation($reflClass, Builder::class);
         $builderTarget = new self();
-        $builderTarget->view = new PhpView(__DIR__.'/templates');
+        $builderTarget->view = new TemplateEngine(__DIR__.'/templates');
         $builderTarget->targetClass = $class;
-        $builderTarget->properties = array_values(array_filter($class->getProperties(), static function (ReflectionProperty $prop) use ($reflClass, $annotationReader, $builderAnnotation) {
-            if ($prop->isStatic()) {
-                return false;
-            }
-            if (!empty($builderAnnotation->ignore) && in_array($prop->getName(), $builderAnnotation->ignore, true)) {
-                return false;
-            }
-            if (null !== $annotationReader->getPropertyAnnotation($reflClass->getProperty($prop->getName()), BuilderIgnore::class)) {
-                return false;
-            }
+        $builderTarget->properties = array_values(array_filter($class->getProperties(),
+            static function (ReflectionProperty $prop) use ($reflClass, $annotationReader, $builderAnnotation): bool {
+                if ($prop->isStatic()) {
+                    return false;
+                }
+                if (!empty($builderAnnotation->ignore) && in_array($prop->getName(), $builderAnnotation->ignore, true)) {
+                    return false;
+                }
+                if (null !== $annotationReader->getPropertyAnnotation($reflClass->getProperty($prop->getName()), BuilderIgnore::class)) {
+                    return false;
+                }
 
-            return true;
-        }));
+                return true;
+            }));
 
         return $builderTarget;
     }
@@ -251,7 +251,7 @@ class BuilderTarget
             $class->removeMethod($method->getName());
             $class->getAst()->stmts[] = $method->getAst();
         }
-        usort($class->getAst()->stmts, function ($a, $b) use ($propertyIndex) {
+        usort($class->getAst()->stmts, function ($a, $b) use ($propertyIndex): int {
             return $this->getStmtSort($a, $propertyIndex) <=> $this->getStmtSort($b, $propertyIndex);
         });
 
@@ -289,7 +289,7 @@ class BuilderTarget
             $class->getAst()->stmts[] = $method->getAst();
         }
         $propertyIndex = array_flip(Arrays::pull($this->properties, 'name'));
-        usort($class->getAst()->stmts, function ($a, $b) use ($propertyIndex) {
+        usort($class->getAst()->stmts, function ($a, $b) use ($propertyIndex): int {
             return $this->getStmtSort($a, $propertyIndex) <=> $this->getStmtSort($b, $propertyIndex);
         });
 

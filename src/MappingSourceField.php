@@ -77,9 +77,9 @@ class MappingSourceField
     {
         if (null === $this->type) {
             if (null !== $this->property) {
-                $this->type = $this->source->getDocReader()->getPropertyType($this->property);
+                $this->type = $this->source->getDocReader()->createPropertyDocBlock($this->property)->getType();
             } else {
-                $this->type = $this->source->getDocReader()->getReturnType($this->getter);
+                $this->type = $this->source->getDocReader()->createMethodDocBlock($this->getter)->getReturnType();
             }
         }
 

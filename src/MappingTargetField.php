@@ -77,9 +77,9 @@ class MappingTargetField
     {
         if (null === $this->type) {
             if (null !== $this->property) {
-                $this->type = $this->target->getDocReader()->getPropertyType($this->property);
+                $this->type = $this->target->getDocReader()->createPropertyDocBlock($this->property)->getType();
             } else {
-                $types = $this->target->getDocReader()->getParameterTypes($this->setter);
+                $types = $this->target->getDocReader()->createMethodDocBlock($this->setter)->getParameterTypes();
                 $this->type = array_values($types)[0];
             }
         }

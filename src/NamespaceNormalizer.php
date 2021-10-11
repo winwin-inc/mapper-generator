@@ -64,6 +64,9 @@ class NamespaceNormalizer extends NodeVisitorAbstract
     {
         $nodeTraverser = new NodeTraverser();
         $visitor = new class() extends NodeVisitorAbstract {
+            /**
+             * @var NamespaceNormalizer
+             */
             public $self;
 
             public function enterNode(Node $node)

@@ -21,11 +21,14 @@
             "winwin\\mapper\\": "tests/"
         }
     },
+    "scripts": {
+        "lint": "./vendor/bin/phpstan analyze --error-format=raw"
+    },
     "require": {
         "php": "^7.2",
         "ext-json": "*",
         "doctrine/annotations": "^1.8",
-        "kuiper/kuiper": "^0.5",
+        "kuiper/serializer": "^0.6",
         "nikic/php-parser": "^4.9",
         "psr/log": "^1.1",
         "roave/better-reflection": "^4.3",
@@ -39,5 +42,5 @@
         "phpstan/phpstan-strict-rules": "^0.12",
         "winwin/composer-phpcs-plugin": "^0.2"
     },
-    "bin": "bin/mapper-generator"
+    "bin": ["bin/mapper-generator", "bin/builder-generator"]
 }

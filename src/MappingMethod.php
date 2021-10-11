@@ -245,9 +245,10 @@ class MappingMethod implements LoggerAwareInterface
     {
         if (null !== $mapping->qualifiedByName) {
             $method = $this->mapper->getMapperClass()->getMethod($mapping->qualifiedByName);
-            $reflectionParameters = array_values(array_filter($method->getParameters(), function (\ReflectionParameter $param) {
-                return !$param->isOptional();
-            }));
+            $reflectionParameters = array_values(array_filter($method->getParameters(),
+                static function (\ReflectionParameter $param): bool {
+                    return !$param->isOptional();
+                }));
             if (1 !== count($reflectionParameters)) {
                 throw new \InvalidArgumentException($this->mapper->getMapperClass()->getName().'::'.$mapping->qualifiedByName.' should contain only one parameter');
             }
@@ -291,9 +292,10 @@ class MappingMethod implements LoggerAwareInterface
         }
         if (null !== $mapping->qualifiedByName) {
             $method = $this->mapper->getMapperClass()->getMethod($mapping->qualifiedByName);
-            $reflectionParameters = array_values(array_filter($method->getParameters(), static function (\ReflectionParameter $parameter) {
-                return !$parameter->isDefaultValueAvailable();
-            }));
+            $reflectionParameters = array_values(array_filter($method->getParameters(),
+                static function (\ReflectionParameter $parameter): bool {
+                    return !$parameter->isDefaultValueAvailable();
+                }));
             if (1 === count($reflectionParameters)
                 && null !== $reflectionParameters[0]->getType()
                 && $reflectionParameters[0]->getType()->getName() === $this->source->getSourceClass()->getName()) {
@@ -347,7 +349,7 @@ class MappingMethod implements LoggerAwareInterface
             return;
         }
         /** @var ReflectionTypeInterface[] $params */
-        $params = array_values($this->mapper->getDocReader()->getParameterTypes($afterMappingMethod));
+        $params = array_values($this->mapper->getDocReader()->createMethodDocBlock($afterMappingMethod)->getParameterTypes());
         if (2 !== count($params)) {
             throw new \InvalidArgumentException(sprintf('%s::%s should contain only 2 parameter %s and %s', $afterMappingMethod->getDeclaringClass()->getName(), $afterMappingMethod->getName(), $this->source->getSourceClass()->getName(), $this->target->getTargetClass()->getName()));
         }

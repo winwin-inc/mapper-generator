@@ -6,8 +6,8 @@ namespace winwin\mapper;
 
 use Doctrine\Common\Annotations\Reader;
 use kuiper\helper\Arrays;
-use kuiper\serializer\DocReader;
-use kuiper\serializer\DocReaderInterface;
+use kuiper\reflection\ReflectionDocBlockFactory;
+use kuiper\reflection\ReflectionDocBlockFactoryInterface;
 use PhpParser\Error as ParserError;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -38,7 +38,7 @@ class Mapper implements LoggerAwareInterface
     private $converter;
 
     /**
-     * @var DocReaderInterface
+     * @var ReflectionDocBlockFactoryInterface
      */
     private $docReader;
 
@@ -62,7 +62,7 @@ class Mapper implements LoggerAwareInterface
         $this->mapperVisitor = $visitor;
         $this->annotationReader = $visitor->getAnnotationReader();
         $this->converter = $visitor->getConverter();
-        $this->docReader = new DocReader();
+        $this->docReader = ReflectionDocBlockFactory::getInstance();
         $this->mapperClass = $mapperClass;
         $this->betterReflectionClass = ReflectionClass::createFromName($mapperClass->getName());
         $this->mappingMethods = [];
@@ -93,9 +93,9 @@ class Mapper implements LoggerAwareInterface
     }
 
     /**
-     * @return DocReaderInterface
+     * @return ReflectionDocBlockFactoryInterface
      */
-    public function getDocReader(): DocReaderInterface
+    public function getDocReader(): ReflectionDocBlockFactoryInterface
     {
         return $this->docReader;
     }
@@ -111,8 +111,9 @@ class Mapper implements LoggerAwareInterface
             throw new \InvalidArgumentException("Cannot generate method body for $method");
         }
         $reflectionMethod = $this->betterReflectionClass->getMethod($method);
+        $body = $this->getMappingMethod($method)->generate();
         try {
-            $reflectionMethod->setBodyFromString($body = $this->getMappingMethod($method)->generate());
+            $reflectionMethod->setBodyFromString($body);
         } catch (ParserError $e) {
             throw new \RuntimeException("Generated code has syntax error\n".$body, 0, $e);
         }

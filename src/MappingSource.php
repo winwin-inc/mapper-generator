@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace winwin\mapper;
 
-use kuiper\serializer\DocReaderInterface;
+use kuiper\reflection\ReflectionDocBlockFactoryInterface;
 
 class MappingSource
 {
     /**
-     * @var DocReaderInterface
+     * @var ReflectionDocBlockFactoryInterface
      */
     private $docReader;
 
@@ -23,7 +23,7 @@ class MappingSource
      */
     private $parameterName;
 
-    public function __construct(DocReaderInterface $docReader, string $sourceClass, string $parameterName)
+    public function __construct(ReflectionDocBlockFactoryInterface $docReader, string $sourceClass, string $parameterName)
     {
         $this->docReader = $docReader;
         $this->sourceClass = new \ReflectionClass($sourceClass);
@@ -31,9 +31,9 @@ class MappingSource
     }
 
     /**
-     * @return DocReaderInterface
+     * @return ReflectionDocBlockFactoryInterface
      */
-    public function getDocReader(): DocReaderInterface
+    public function getDocReader(): ReflectionDocBlockFactoryInterface
     {
         return $this->docReader;
     }

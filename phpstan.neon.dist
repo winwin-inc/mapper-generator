@@ -7,6 +7,8 @@ parameters:
   level: 6
   paths:
     - src
+  excludePaths:
+    - src/templates
   checkMissingIterableValueType: false
   checkGenericClassInNonGenericObjectType: false
   ignoreErrors:
