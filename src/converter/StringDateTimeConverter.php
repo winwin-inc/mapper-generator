@@ -13,7 +13,7 @@ class StringDateTimeConverter implements Converter
     public function support(ReflectionTypeInterface $from, ReflectionTypeInterface $to): bool
     {
         return $to->isClass()
-            && is_a($to->getName(), \DateTime::class, true)
+            && is_a($to->getName(), \DateTimeInterface::class, true)
             && 'string' === $from->getName();
     }
 
@@ -28,8 +28,13 @@ class StringDateTimeConverter implements Converter
                     $context->getValue());
             }
         }
+        if (is_a($context->getCastType()->getName(), \DateTime::class)) {
+            $class = \DateTime::class;
+        } else {
+            $class = \DateTimeImmutable::class;
+        }
 
-        return sprintf("\DateTime::createFromFormat(%s, %s)",
+        return sprintf('\\'."$class::createFromFormat(%s, %s)",
             var_export($context->getMapping()->dateFormat ?? 'Y-m-d H:i:s', true),
             $context->getValue());
     }

@@ -12,7 +12,7 @@ class DateTimeStringConverter implements Converter
     public function support(ReflectionTypeInterface $from, ReflectionTypeInterface $to): bool
     {
         return $from->isClass()
-            && is_a($from->getName(), \DateTime::class, true)
+            && is_a($from->getName(), \DateTimeInterface::class, true)
             && 'string' === $to->getName();
     }
 
