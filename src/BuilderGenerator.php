@@ -69,21 +69,29 @@ class BuilderGenerator implements LoggerAwareInterface
             return null;
         }
 
-        $builderTarget = null;
+        $targetClass = null;
         foreach (ReflectionFileFactory::getInstance()->create($file)->getClasses() as $class) {
             $builder = $this->annotationReader->getClassAnnotation(new \ReflectionClass($class), Builder::class);
             if (null !== $builder) {
-                $reflector = $this->createReflector($file);
-                $builderTarget = BuilderTarget::create($this->annotationReader, $reflector->reflect($class));
+                $targetClass = $class;
                 break;
             }
         }
-        if (null === $builderTarget || count($builderTarget->getProperties()) <= $this->minPropertyNum) {
+        if (null === $targetClass) {
+            return null;
+        }
+
+        $reflector = $this->createReflector($file);
+        $builderTarget = BuilderTarget::create($this->annotationReader, $reflector->reflect($targetClass));
+        if (count($builderTarget->getProperties()) <= $this->minPropertyNum) {
             return null;
         }
         $result = new BuilderResult($file);
         $result->setBuilderFile(preg_replace('/\.php$/', 'Builder.php', $file));
         $this->generateTarget($builderTarget, $result);
+
+        // Ast 已经被上面过程修改过，可能导致后续处理错误，需要重新生成 ast
+        $builderTarget = BuilderTarget::create($this->annotationReader, $reflector->reflect($targetClass));
         $this->generateBuilder($builderTarget, $result);
 
         return $result;

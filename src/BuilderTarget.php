@@ -112,7 +112,7 @@ class BuilderTarget
         $properties = [];
         $defaultValues = $this->getConstructorParameters();
         foreach ($this->properties as $property) {
-            $typeString = implode('|', $property->getDocBlockTypeStrings());
+            $typeString = $this->getPropertyType($property);
             try {
                 $type = ReflectionType::parse($typeString);
             } catch (\Exception $e) {
@@ -192,7 +192,7 @@ class BuilderTarget
         $defaultValues = $this->getConstructorParameters();
 
         foreach ($this->properties as $property) {
-            $targetTypeString = implode('|', $property->getDocBlockTypeStrings());
+            $targetTypeString = $this->getPropertyType($property);
             $targetType = ReflectionType::parse($targetTypeString);
 
             if ($targetType->isClass()) {
@@ -325,5 +325,23 @@ class BuilderTarget
         }
 
         return $sort;
+    }
+
+    /**
+     * @param ReflectionProperty $property
+     *
+     * @return string
+     */
+    private function getPropertyType(ReflectionProperty $property): string
+    {
+        $typeString = implode('|', $property->getDocBlockTypeStrings());
+        if (empty($typeString)) {
+            $propertyType = $property->getType();
+            if (null !== $propertyType) {
+                $typeString = ($propertyType->allowsNull() ? '?' : '').$propertyType;
+            }
+        }
+
+        return $typeString;
     }
 }
