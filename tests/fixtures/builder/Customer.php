@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace winwin\mapper\fixtures\builder;
 
-use winwin\mapper\annotations\Builder;
+use winwin\mapper\attribute\Builder;
 
-/**
- * @Builder()
- */
+#[Builder]
 class Customer
 {
     /**
@@ -20,6 +18,8 @@ class Customer
      * @var string|null
      */
     private $name;
+
+    private ?string $result = null;
 
     /**
      * Customer constructor.
@@ -47,5 +47,21 @@ class Customer
     public function getName(): string
     {
         return $this->name;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getResult(): ?string
+    {
+        return $this->result;
+    }
+
+    /**
+     * @param string|null $result
+     */
+    public function setResult(?string $result): void
+    {
+        $this->result = $result;
     }
 }

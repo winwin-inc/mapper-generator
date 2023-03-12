@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace winwin\mapper\fixtures;
 
-use winwin\mapper\annotations\Mapper;
+use winwin\mapper\attribute\Mapper;
 use winwin\mapper\MapperTrait;
 
-/**
- * @Mapper()
- */
+#[Mapper]
 class OrderItemMapper
 {
     use MapperTrait;

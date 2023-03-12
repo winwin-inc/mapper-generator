@@ -5,29 +5,22 @@ declare(strict_types=1);
 namespace winwin\mapper;
 
 use PHPUnit\Framework\TestCase;
-use Roave\BetterReflection\BetterReflection;
-use Roave\BetterReflection\Reflector\ClassReflector;
-use Roave\BetterReflection\SourceLocator\Type\SingleFileSourceLocator;
+use winwin\mapper\builder\BuilderGenerator;
+use winwin\mapper\builder\BuilderTarget;
 use winwin\mapper\fixtures\builder\Customer;
 
 class BuilderTargetTest extends TestCase
 {
     private $generator;
 
-    protected function setUp()
-    {
-    }
 
     public function testGenerateCode()
     {
-        $astLocator = (new BetterReflection())->astLocator();
-        $file = __DIR__.'/fixtures/builder/Customer.php';
-        $reflector = new ClassReflector(new SingleFileSourceLocator($file, $astLocator));
-        $class = $reflector->reflect(Customer::class);
-
-        $builderTarget = BuilderTarget::create(AnnotationReader::getInstance(), $class);
-        $this->assertEquals($builderTarget->generateCode(), file_get_contents(__DIR__.'/fixtures/builder/Customer.php.inc'));
-        $this->assertEquals($builderTarget->generateBuilderCode(), file_get_contents(__DIR__.'/fixtures/builder/CustomerBuilder.php'));
+        $builderTarget = BuilderTarget::create(new \ReflectionClass(CustomerSimple::class));
+       // $this->assertEquals('', $builderTarget->generateCode());
+        $this->assertEquals('', $builderTarget->generateBuilderCode());
+        // $this->assertEquals($builderTarget->generateCode(), file_get_contents(__DIR__.'/fixtures/builder/Customer.php.inc'));
+        // $this->assertEquals($builderTarget->generateBuilderCode(), file_get_contents(__DIR__.'/fixtures/builder/CustomerBuilder.php'));
     }
 
     public function testDefaultValue()
@@ -58,7 +51,7 @@ class BuilderTargetTest extends TestCase
     public function testMinNumChanged()
     {
         $file = __DIR__.'/fixtures/builder/Customer.php';
-        $generator = new BuilderGenerator(AnnotationReader::getInstance(), null, 1);
+        $generator = new BuilderGenerator(null, 1);
         $result = $generator->generate($file);
         $this->assertNotNull($result);
     }

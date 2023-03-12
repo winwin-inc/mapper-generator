@@ -13,12 +13,12 @@ class NamespaceNormalizer extends NodeVisitorAbstract
     /**
      * @var string
      */
-    private $namespace = '';
+    private string $namespace = '';
 
     /**
      * @var string[]
      */
-    private $importNames = [];
+    private array $importNames = [];
 
     public function enterNode(Node $node)
     {

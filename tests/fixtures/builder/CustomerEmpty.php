@@ -4,20 +4,14 @@ declare(strict_types=1);
 
 namespace winwin\mapper\fixtures\builder;
 
-use winwin\mapper\annotations\Builder;
+use winwin\mapper\attribute\Builder;
 
-/**
- * @Builder()
- */
-class Customer
+#[Builder]
+class CustomerEmpty
 {
-    /**
-     * @var int
-     */
-    private $id;
-
-    /**
-     * @var string|null
-     */
-    private $name;
+    public function __construct(
+        private readonly int $id,
+        private readonly ?string $name)
+    {
+    }
 }

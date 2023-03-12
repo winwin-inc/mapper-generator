@@ -4,40 +4,22 @@ declare(strict_types=1);
 
 namespace winwin\mapper;
 
-use Doctrine\Common\Annotations\Reader;
-use winwin\mapper\annotations\Mapper;
+use winwin\mapper\attribute\Mapper;
 
 class DefaultMapperFactory implements MapperFactory
 {
-    /**
-     * @var DefaultMapperFactory
-     */
-    private static $INSTANCE;
-
-    /**
-     * @var Reader
-     */
-    private $annotationReader;
+    private static ?DefaultMapperFactory $INSTANCE = null;
 
     /**
      * @var array<string,object>
      */
-    private $mappers;
+    private array $mappers = [];
 
-    /**
-     * DefaultMapperFactory constructor.
-     *
-     * @param Reader $annotationReader
-     */
-    public function __construct(Reader $annotationReader)
-    {
-        $this->annotationReader = $annotationReader;
-    }
 
     public static function getInstance(): self
     {
         if (null === self::$INSTANCE) {
-            self::$INSTANCE = new self(AnnotationReader::getInstance());
+            self::$INSTANCE = new self();
         }
 
         return self::$INSTANCE;
@@ -50,8 +32,8 @@ class DefaultMapperFactory implements MapperFactory
     {
         if (!isset($this->mappers[$mapperClass])) {
             $class = new \ReflectionClass($mapperClass);
-            $mapperAnnotation = $this->annotationReader->getClassAnnotation($class, Mapper::class);
-            if (null === $mapperAnnotation) {
+            $mapperAttributes = $class->getAttributes(Mapper::class);
+            if (count($mapperAttributes) === 0) {
                 throw new \InvalidArgumentException("Class $mapperClass not annotated with ".Mapper::class);
             }
             $args = [];

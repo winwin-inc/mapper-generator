@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace winwin\mapper\fixtures\builder;
 
-use winwin\mapper\annotations\Builder;
+use winwin\mapper\attribute\Builder;
 
-/**
- * @Builder()
- */
+#[Builder]
 class CustomerWithConst
 {
     private const DEFAULT_NAME = 'john';

@@ -6,27 +6,17 @@ namespace winwin\mapper;
 
 class TemplateEngine
 {
-    /**
-     * @var string
-     */
-    private $baseDir;
+    private readonly string $baseDir;
 
-    /**
-     * @var string
-     */
-    private $extension;
-
-    public function __construct(string $baseDir, string $extension = '.php')
+    public function __construct(string $baseDir, private readonly string $extension = '.php')
     {
         $this->baseDir = rtrim($baseDir, '/');
-        $this->extension = $extension;
     }
 
     public function render(string $name, array $context = []): string
     {
         extract($context, EXTR_SKIP);
         ob_start();
-        /** @noinspection PhpIncludeInspection */
         include $this->baseDir.'/'.$name.$this->extension;
 
         return ob_get_clean();

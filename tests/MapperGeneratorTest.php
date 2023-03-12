@@ -10,17 +10,18 @@ use PhpParser\NodeVisitorAbstract;
 use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard;
 use PHPUnit\Framework\TestCase;
-use Roave\BetterReflection\Reflection\ReflectionClass;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\ConsoleOutput;
-use winwin\mapper\converter\DateTimeStringConverter;
-use winwin\mapper\converter\EnumIntConverter;
-use winwin\mapper\converter\EnumStringConverter;
-use winwin\mapper\converter\IntEnumConverter;
-use winwin\mapper\converter\PrimitiveConverter;
-use winwin\mapper\converter\StringDateTimeConverter;
-use winwin\mapper\converter\StringEnumConverter;
+use winwin\mapper\mapper\converter\DateTimeStringConverter;
+use winwin\mapper\mapper\converter\EnumIntConverter;
+use winwin\mapper\mapper\converter\EnumStringConverter;
+use winwin\mapper\mapper\converter\IntEnumConverter;
+use winwin\mapper\mapper\converter\PrimitiveConverter;
+use winwin\mapper\mapper\converter\StringDateTimeConverter;
+use winwin\mapper\mapper\converter\StringEnumConverter;
 use winwin\mapper\fixtures\UpdateCustomerMapper;
+use winwin\mapper\mapper\MapperGenerator;
+use winwin\mapper\mapper\ValueConverter;
 
 class MapperGeneratorTest extends TestCase
 {
@@ -29,12 +30,17 @@ class MapperGeneratorTest extends TestCase
      */
     public function testMapper(string $file)
     {
-        $mapperGenerator = new MapperGenerator(AnnotationReader::getInstance(), $this->createValueConverter());
+        $mapperGenerator = new MapperGenerator($this->createValueConverter());
         $mapperGenerator->setLogger(new ConsoleLogger(new ConsoleOutput()));
         $code = $mapperGenerator->generate($file);
-        $expectFile = $file.'.inc';
+        $expectFile = $file.'.result';
         // file_put_contents($expectFile, $code);
         $this->assertEquals(file_get_contents($expectFile), $code);
+    }
+
+    public function testOne()
+    {
+        $this->testMapper(__DIR__.'/fixtures/CustomerMapper.php');
     }
 
     public function provideFiles(): array

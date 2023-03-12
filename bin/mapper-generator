@@ -2,7 +2,7 @@
 <?php
 
 use Symfony\Component\Console\Application;
-use winwin\mapper\GenerateMapperCommand;
+use winwin\mapper\mapper\GenerateMapperCommand;
 
 foreach ([__DIR__.'/../../../autoload.php', __DIR__.'/../vendor/autoload.php'] as $file) {
     if (file_exists($file)) {
